@@ -62,6 +62,10 @@ target_sources(DRMTRGRR
         Source/UI/DetectorPanel.cpp
         Source/UI/SlotRackComponent.h
         Source/UI/SlotRackComponent.cpp
+        Source/UI/BrowserView.h
+        Source/UI/BrowserView.cpp
+        Source/UI/SettingsView.h
+        Source/UI/SettingsView.cpp
         Source/UI/HeaderBar.h
         Source/UI/HeaderBar.cpp
 )

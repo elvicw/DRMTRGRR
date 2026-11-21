@@ -5,6 +5,8 @@
 #include "UI/HeaderBar.h"
 #include "UI/TriggerVisualizer.h"
 #include "UI/DetectorPanel.h"
+#include "UI/BrowserView.h"
+#include "UI/SettingsView.h"
 #include "UI/SlotRackComponent.h"
 
 namespace yeahwaah
@@ -28,7 +30,11 @@ private:
     HeaderBar headerBar;
     TriggerVisualizer visualizer;
     DetectorPanel detectorPanel;
+    BrowserView browserView;
+    SettingsView settingsView;
     SlotRackComponent slotRack;
+
+    void updateActiveTabView(ActiveTab tab);
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(DrmtrgrrAudioProcessorEditor)
 };

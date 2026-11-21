@@ -9,6 +9,8 @@ DrmtrgrrAudioProcessorEditor::DrmtrgrrAudioProcessorEditor(DrmtrgrrAudioProcesso
       headerBar(p),
       visualizer(p.getVisualizerBuffer(), p.getAPVTS().getParameter("detail")),
       detectorPanel(p.getAPVTS()),
+      browserView(p),
+      settingsView(p),
       slotRack(p)
 {
     juce::LookAndFeel::setDefaultLookAndFeel(&slateLookAndFeel);
@@ -16,6 +18,8 @@ DrmtrgrrAudioProcessorEditor::DrmtrgrrAudioProcessorEditor(DrmtrgrrAudioProcesso
     addAndMakeVisible(headerBar);
     addAndMakeVisible(visualizer);
     addAndMakeVisible(detectorPanel);
+    addChildComponent(browserView);
+    addChildComponent(settingsView);
     addAndMakeVisible(slotRack);
 
     // Dropping a sample on the main visualizer loads into Slot 1
@@ -26,9 +30,15 @@ DrmtrgrrAudioProcessorEditor::DrmtrgrrAudioProcessorEditor(DrmtrgrrAudioProcesso
         }
     };
 
-    setSize(1040, 720);
+    headerBar.onTabChanged = [this](ActiveTab tab) {
+        updateActiveTabView(tab);
+    };
+
+    updateActiveTabView(ActiveTab::Trigger);
+
+    setSize(1040, 730);
     setResizable(true, true);
-    setResizeLimits(960, 680, 1600, 1100);
+    setResizeLimits(980, 680, 1600, 1100);
 
     startTimerHz(35); // Smooth 35 FPS UI animation
 }
@@ -39,12 +49,24 @@ DrmtrgrrAudioProcessorEditor::~DrmtrgrrAudioProcessorEditor()
     juce::LookAndFeel::setDefaultLookAndFeel(nullptr);
 }
 
+void DrmtrgrrAudioProcessorEditor::updateActiveTabView(ActiveTab tab)
+{
+    visualizer.setVisible(tab == ActiveTab::Trigger);
+    detectorPanel.setVisible(tab == ActiveTab::Trigger);
+    browserView.setVisible(tab == ActiveTab::Browser);
+    settingsView.setVisible(tab == ActiveTab::Settings);
+
+    resized();
+}
+
 void DrmtrgrrAudioProcessorEditor::timerCallback()
 {
     bool auditioning = *audioProcessor.getAPVTS().getRawParameterValue("auditionFilter") > 0.5f;
     visualizer.setAuditionMode(auditioning);
 
-    visualizer.updateWaveform();
+    if (visualizer.isVisible())
+        visualizer.updateWaveform();
+
     slotRack.updateMeters();
     headerBar.updateMeters(audioProcessor.getInputPeak(), audioProcessor.getOutputPeak());
 }
@@ -61,13 +83,24 @@ void DrmtrgrrAudioProcessorEditor::resized()
     const int headerHeight = 60;
     headerBar.setBounds(area.removeFromTop(headerHeight));
 
-    const int visualizerHeight = 185;
-    visualizer.setBounds(area.removeFromTop(visualizerHeight));
+    const int rackHeight = 365;
+    slotRack.setBounds(area.removeFromBottom(rackHeight));
 
-    const int detectorHeight = 105;
-    detectorPanel.setBounds(area.removeFromTop(detectorHeight));
-
-    slotRack.setBounds(area);
+    // Middle area is occupied by the active tab
+    if (visualizer.isVisible())
+    {
+        const int visHeight = 185;
+        visualizer.setBounds(area.removeFromTop(visHeight));
+        detectorPanel.setBounds(area);
+    }
+    else if (browserView.isVisible())
+    {
+        browserView.setBounds(area);
+    }
+    else if (settingsView.isVisible())
+    {
+        settingsView.setBounds(area);
+    }
 }
 
 } // namespace yeahwaah
