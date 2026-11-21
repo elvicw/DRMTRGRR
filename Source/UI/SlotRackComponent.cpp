@@ -218,42 +218,75 @@ void SingleSlotStrip::paint(juce::Graphics& g)
     g.setColour(SlateLookAndFeel::slateBorder);
     g.drawRoundedRectangle(waveBox, 3.0f, 1.0f);
 
-    // Render waveform thumbnail
+    // Render waveform thumbnail (Neon Tube Glow)
     if (!waveformThumbnail.empty())
     {
         const int numPts = (int)waveformThumbnail.size();
         const float step = (waveBox.getWidth() - 4.0f) / static_cast<float>(numPts);
         const float midY = waveBox.getCentreY();
 
-        g.setColour(SlateLookAndFeel::cyanGlow.withAlpha(0.85f));
         for (int i = 0; i < numPts; ++i)
         {
-            float peakH = waveformThumbnail[i] * (waveBox.getHeight() * 0.42f);
-            float px = waveBox.getX() + 2.0f + i * step;
+            float peakH = waveformThumbnail[static_cast<size_t>(i)] * (waveBox.getHeight() * 0.44f);
+            float px = waveBox.getX() + 2.0f + static_cast<float>(i) * step;
+
+            // Outer cyan glow line
+            g.setColour(SlateLookAndFeel::cyanGlow.withAlpha(0.35f));
+            g.drawVerticalLine(static_cast<int>(px), midY - peakH - 1.0f, midY + peakH + 1.0f);
+
+            // Core electric line
+            g.setColour(juce::Colour(0xffb3ffff));
             g.drawVerticalLine(static_cast<int>(px), midY - peakH, midY + peakH);
+        }
+
+        // Active hit flash playhead across waveform when sample triggers
+        if (currentPeak > 0.05f)
+        {
+            g.setColour(juce::Colours::white.withAlpha(std::min(1.0f, currentPeak)));
+            g.fillRect(waveBox.getX() + 3.0f, waveBox.getY() + 2.0f, 2.5f, waveBox.getHeight() - 4.0f);
         }
     }
 
-    // Peak Meter beside volume fader
+    // 10-Segment Studio LED Ladder Meter beside volume fader
     const float meterX = 52.0f;
     const float meterY = 114.0f;
-    const float meterW = 6.0f;
-    const float meterH = 100.0f;
+    const float meterW = 7.0f;
+    const int numLeds = 10;
+    const float ledH = 8.5f;
+    const float ledSpacing = 1.5f;
 
-    g.setColour(juce::Colour(0xff0d0f12));
-    g.fillRoundedRectangle(meterX, meterY, meterW, meterH, 2.0f);
+    float normPeak = juce::jlimit(0.0f, 1.0f, currentPeak);
+    int litLeds = static_cast<int>(normPeak * numLeds);
 
-    if (currentPeak > 0.001f)
+    for (int l = 0; l < numLeds; ++l)
     {
-        float normPeak = juce::jlimit(0.0f, 1.0f, currentPeak);
-        float activeH = normPeak * meterH;
-        float activeY = meterY + meterH - activeH;
+        float ly = meterY + (numLeds - 1 - l) * (ledH + ledSpacing);
+        bool isLit = (l < litLeds);
 
-        juce::Colour meterCol = normPeak > 0.95f ? SlateLookAndFeel::muteRed
-                              : normPeak > 0.75f ? SlateLookAndFeel::amberGlow
-                              : SlateLookAndFeel::cyanGlow;
-        g.setColour(meterCol);
-        g.fillRoundedRectangle(meterX + 1.0f, activeY, meterW - 2.0f, activeH, 1.0f);
+        juce::Colour ledColor;
+        if (l >= 8) // Red clip LEDs
+            ledColor = juce::Colour(0xffff2d55);
+        else if (l >= 6) // Amber warning LEDs
+            ledColor = juce::Colour(0xffffa600);
+        else // Green nominal LEDs
+            ledColor = juce::Colour(0xff00e676);
+
+        if (isLit)
+        {
+            // Lit LED glow
+            g.setColour(ledColor.withAlpha(0.3f));
+            g.fillRoundedRectangle(meterX - 1.0f, ly - 1.0f, meterW + 2.0f, ledH + 2.0f, 1.5f);
+            g.setColour(ledColor);
+            g.fillRoundedRectangle(meterX, ly, meterW, ledH, 1.0f);
+        }
+        else
+        {
+            // Dark unlit translucent LED lens
+            g.setColour(ledColor.withAlpha(0.12f));
+            g.fillRoundedRectangle(meterX, ly, meterW, ledH, 1.0f);
+            g.setColour(juce::Colour(0xff0b0d11));
+            g.drawRoundedRectangle(meterX, ly, meterW, ledH, 1.0f, 0.6f);
+        }
     }
 
     // Mini parameter labels

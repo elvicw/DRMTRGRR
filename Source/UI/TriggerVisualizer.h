@@ -6,6 +6,14 @@
 namespace yeahwaah
 {
 
+struct HitShockwave
+{
+    float x;
+    float y;
+    float velocity;
+    int64_t timestamp;
+};
+
 class TriggerVisualizer : public juce::Component,
                           public juce::FileDragAndDropTarget
 {
@@ -37,12 +45,14 @@ private:
 
     std::vector<float> waveformData;
     std::vector<HitEvent> hitMarkers;
+    std::vector<HitShockwave> shockwaves;
 
     bool isDraggingDetail = false;
     bool isAuditioning = false;
     bool isDragHovered = false;
 
     float detailDb = -24.0f;
+    int64_t lastSeenHitTimestamp = 0;
 
     float dbToY(float dB, float height) const;
     float yToDb(float y, float height) const;
