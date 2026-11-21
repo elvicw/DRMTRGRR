@@ -8,7 +8,29 @@ namespace yeahwaah
 HeaderBar::HeaderBar(DrmtrgrrAudioProcessor& proc)
     : processor(proc)
 {
-    // Preset dropdown
+    // 1. Slate Navigation Tabs
+    browserTabButton.setClickingTogglesState(false);
+    browserTabButton.onClick = [this] { setActiveTab(ActiveTab::Browser); };
+    addAndMakeVisible(browserTabButton);
+
+    triggerTabButton.setClickingTogglesState(false);
+    triggerTabButton.onClick = [this] { setActiveTab(ActiveTab::Trigger); };
+    addAndMakeVisible(triggerTabButton);
+
+    settingsTabButton.setClickingTogglesState(false);
+    settingsTabButton.onClick = [this] { setActiveTab(ActiveTab::Settings); };
+    addAndMakeVisible(settingsTabButton);
+
+    updateTabButtons();
+
+    // 2. Preset Selection
+    prevPresetBtn.onClick = [this] {
+        int id = presetBox.getSelectedId() - 1;
+        if (id > 0)
+            presetBox.setSelectedId(id);
+    };
+    addAndMakeVisible(prevPresetBtn);
+
     for (int i = 0; i < processor.getNumPrograms(); ++i)
         presetBox.addItem(processor.getProgramName(i), i + 1);
 
@@ -20,33 +42,70 @@ HeaderBar::HeaderBar(DrmtrgrrAudioProcessor& proc)
     };
     addAndMakeVisible(presetBox);
 
-    // Dry / Wet Mix Knob
+    nextPresetBtn.onClick = [this] {
+        int id = presetBox.getSelectedId() + 1;
+        if (id <= processor.getNumPrograms())
+            presetBox.setSelectedId(id);
+    };
+    addAndMakeVisible(nextPresetBtn);
+
+    // 3. Input Trim Knob
+    inputGainSlider.setSliderStyle(juce::Slider::RotaryHorizontalVerticalDrag);
+    inputGainSlider.setTextBoxStyle(juce::Slider::TextBoxBelow, false, 44, 14);
+    inputGainSlider.setTextValueSuffix(" dB");
+    addAndMakeVisible(inputGainSlider);
+    inGainAtt = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
+        processor.getAPVTS(), "inputGain", inputGainSlider);
+
+    inLabel.setText("INPUT", juce::dontSendNotification);
+    inLabel.setFont(juce::Font(9.0f, juce::Font::bold));
+    inLabel.setColour(juce::Label::textColourId, SlateLookAndFeel::textDim);
+    inLabel.setJustificationType(juce::Justification::centred);
+    addAndMakeVisible(inLabel);
+
+    // 4. Dry / Wet Mix Knob
     mixSlider.setSliderStyle(juce::Slider::RotaryHorizontalVerticalDrag);
-    mixSlider.setTextBoxStyle(juce::Slider::TextBoxBelow, false, 48, 14);
+    mixSlider.setTextBoxStyle(juce::Slider::TextBoxBelow, false, 44, 14);
     mixSlider.setTextValueSuffix("%");
     addAndMakeVisible(mixSlider);
     mixAtt = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
         processor.getAPVTS(), "mix", mixSlider);
 
     mixLabel.setText("MIX", juce::dontSendNotification);
-    mixLabel.setFont(juce::Font(9.5f, juce::Font::bold));
+    mixLabel.setFont(juce::Font(9.0f, juce::Font::bold));
     mixLabel.setColour(juce::Label::textColourId, SlateLookAndFeel::textDim);
     mixLabel.setJustificationType(juce::Justification::centred);
     addAndMakeVisible(mixLabel);
 
-    // Master Output Level Knob
+    // 5. Master Output Level Knob
     outputGainSlider.setSliderStyle(juce::Slider::RotaryHorizontalVerticalDrag);
-    outputGainSlider.setTextBoxStyle(juce::Slider::TextBoxBelow, false, 48, 14);
+    outputGainSlider.setTextBoxStyle(juce::Slider::TextBoxBelow, false, 44, 14);
     outputGainSlider.setTextValueSuffix(" dB");
     addAndMakeVisible(outputGainSlider);
     outGainAtt = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
         processor.getAPVTS(), "outputGain", outputGainSlider);
 
     outLabel.setText("OUTPUT", juce::dontSendNotification);
-    outLabel.setFont(juce::Font(9.5f, juce::Font::bold));
+    outLabel.setFont(juce::Font(9.0f, juce::Font::bold));
     outLabel.setColour(juce::Label::textColourId, SlateLookAndFeel::textDim);
     outLabel.setJustificationType(juce::Justification::centred);
     addAndMakeVisible(outLabel);
+}
+
+void HeaderBar::setActiveTab(ActiveTab tab)
+{
+    currentTab = tab;
+    updateTabButtons();
+    if (onTabChanged)
+        onTabChanged(tab);
+    repaint();
+}
+
+void HeaderBar::updateTabButtons()
+{
+    browserTabButton.setToggleState(currentTab == ActiveTab::Browser, juce::dontSendNotification);
+    triggerTabButton.setToggleState(currentTab == ActiveTab::Trigger, juce::dontSendNotification);
+    settingsTabButton.setToggleState(currentTab == ActiveTab::Settings, juce::dontSendNotification);
 }
 
 void HeaderBar::updateMeters(float inPeak, float outPeak)
@@ -61,86 +120,76 @@ void HeaderBar::paint(juce::Graphics& g)
     const int w = getWidth();
     const int h = getHeight();
 
-    // Brushed dark slate top bar
-    juce::ColourGradient bgGrad(juce::Colour(0xff232730), 0.0f, 0.0f,
-                                juce::Colour(0xff14161a), 0.0f, (float)h, false);
+    // Brushed dark charcoal chassis
+    juce::ColourGradient bgGrad(juce::Colour(0xff222630), 0.0f, 0.0f,
+                                juce::Colour(0xff13151a), 0.0f, (float)h, false);
     g.setGradientFill(bgGrad);
     g.fillRect(0, 0, w, h);
 
-    // Bottom hairline separator
+    // Bottom hairline metallic divider
     g.setColour(SlateLookAndFeel::slateBorder);
     g.drawHorizontalLine(h - 1, 0.0f, (float)w);
 
-    // Analog Hardware Screws in top left and right
-    auto drawRackScrew = [&](float cx, float cy) {
-        g.setColour(juce::Colour(0xff090b0e));
+    // Analog rack chassis screws in top corners
+    auto drawScrew = [&](float cx, float cy) {
+        g.setColour(juce::Colour(0xff080a0c));
         g.fillEllipse(cx - 5.5f, cy - 5.5f, 11.0f, 11.0f);
         juce::ColourGradient screwGrad(juce::Colour(0xff4a5360), cx - 2.0f, cy - 2.0f,
                                        juce::Colour(0xff181b20), cx + 3.0f, cy + 3.0f, true);
         g.setGradientFill(screwGrad);
         g.fillEllipse(cx - 4.5f, cy - 4.5f, 9.0f, 9.0f);
-        g.setColour(juce::Colour(0xff0b0d11));
+        g.setColour(juce::Colour(0xff090b0e));
         g.drawLine(cx - 3.0f, cy, cx + 3.0f, cy, 1.2f);
         g.drawLine(cx, cy - 3.0f, cx, cy + 3.0f, 1.2f);
     };
-    drawRackScrew(8.0f, 8.0f);
-    drawRackScrew((float)w - 8.0f, 8.0f);
+    drawScrew(8.0f, 8.0f);
+    drawScrew((float)w - 8.0f, 8.0f);
 
     // Company Logo ("yeahwaah")
-    g.setFont(juce::Font(11.5f, juce::Font::bold));
+    g.setFont(juce::Font(10.5f, juce::Font::bold));
     g.setColour(SlateLookAndFeel::cyanGlow);
-    g.drawText("YEAHWAAH", 24, 6, 120, 14, juce::Justification::left);
+    g.drawText("YEAHWAAH", 24, 6, 110, 14, juce::Justification::left);
 
     // Plugin Name ("DRMTRGRR")
-    g.setFont(juce::Font(23.0f, juce::Font::bold));
-    // 3D Shadow
-    g.setColour(juce::Colour(0xff06070a));
-    g.drawText("DRMTRGRR", 25, 21, 180, 26, juce::Justification::left);
-
-    // Glowing embossed text
+    g.setFont(juce::Font(22.0f, juce::Font::bold));
+    g.setColour(juce::Colour(0xff050709));
+    g.drawText("DRMTRGRR", 25, 20, 150, 24, juce::Justification::left);
     g.setColour(SlateLookAndFeel::textLight);
-    g.drawText("DRMTRGRR", 24, 20, 180, 26, juce::Justification::left);
+    g.drawText("DRMTRGRR", 24, 19, 150, 24, juce::Justification::left);
 
-    // Glowing underline accent bar under DRMTRGRR
-    g.setColour(SlateLookAndFeel::cyanGlow.withAlpha(0.7f));
-    g.fillRect(24.0f, 44.0f, 118.0f, 2.0f);
-    g.setColour(SlateLookAndFeel::cyanGlow.withAlpha(0.2f));
-    g.fillRect(24.0f, 43.0f, 118.0f, 4.0f);
+    // Glowing cyan underline
+    g.setColour(SlateLookAndFeel::cyanGlow.withAlpha(0.75f));
+    g.fillRect(24.0f, 43.0f, 116.0f, 2.0f);
 
-    // Tagline
-    g.setFont(juce::Font(8.5f, juce::Font::bold));
-    g.setColour(SlateLookAndFeel::textDim);
-    g.drawText("PRO TRANSIENT REPLACER  |  VST3", 148, 40, 170, 12, juce::Justification::left);
-
-    // Multi-Segment Input Meter
-    const float inMeterX = 492.0f;
+    // 6-Segment Input Meter
+    const float inMeterX = (float)w - 235.0f;
     const float meterY = 12.0f;
-    const float meterW = 7.0f;
-    const int numMtrLeds = 6;
+    const float meterW = 6.5f;
+    const int numLeds = 6;
     const float ledH = 4.5f;
 
     g.setFont(juce::Font(8.0f, juce::Font::bold));
     g.setColour(SlateLookAndFeel::textDim);
-    g.drawText("IN", (int)inMeterX - 14, (int)meterY + 10, 12, 10, juce::Justification::centredRight);
+    g.drawText("IN", (int)inMeterX - 16, (int)meterY + 8, 14, 10, juce::Justification::centredRight);
 
-    int inLedsLit = static_cast<int>(juce::jlimit(0.0f, 1.0f, currentInPeak) * numMtrLeds);
-    for (int l = 0; l < numMtrLeds; ++l)
+    int inLedsLit = static_cast<int>(juce::jlimit(0.0f, 1.0f, currentInPeak) * numLeds);
+    for (int l = 0; l < numLeds; ++l)
     {
-        float ly = meterY + (numMtrLeds - 1 - l) * (ledH + 1.2f);
+        float ly = meterY + (numLeds - 1 - l) * (ledH + 1.2f);
         bool isLit = (l < inLedsLit);
         juce::Colour c = (l >= 5) ? SlateLookAndFeel::muteRed : (l >= 4) ? SlateLookAndFeel::amberGlow : SlateLookAndFeel::cyanGlow;
         g.setColour(isLit ? c : c.withAlpha(0.12f));
         g.fillRoundedRectangle(inMeterX, ly, meterW, ledH, 1.0f);
     }
 
-    // Multi-Segment Output Meter
-    const float outMeterX = (float)w - 24.0f;
-    g.drawText("OUT", (int)outMeterX - 18, (int)meterY + 10, 16, 10, juce::Justification::centredRight);
+    // 6-Segment Output Meter
+    const float outMeterX = (float)w - 22.0f;
+    g.drawText("OUT", (int)outMeterX - 18, (int)meterY + 8, 16, 10, juce::Justification::centredRight);
 
-    int outLedsLit = static_cast<int>(juce::jlimit(0.0f, 1.0f, currentOutPeak) * numMtrLeds);
-    for (int l = 0; l < numMtrLeds; ++l)
+    int outLedsLit = static_cast<int>(juce::jlimit(0.0f, 1.0f, currentOutPeak) * numLeds);
+    for (int l = 0; l < numLeds; ++l)
     {
-        float ly = meterY + (numMtrLeds - 1 - l) * (ledH + 1.2f);
+        float ly = meterY + (numLeds - 1 - l) * (ledH + 1.2f);
         bool isLit = (l < outLedsLit);
         juce::Colour c = (l >= 5) ? SlateLookAndFeel::muteRed : (l >= 4) ? SlateLookAndFeel::amberGlow : SlateLookAndFeel::cyanGlow;
         g.setColour(isLit ? c : c.withAlpha(0.12f));
@@ -152,15 +201,33 @@ void HeaderBar::resized()
 {
     const int w = getWidth();
 
-    // Preset dropdown in center
-    presetBox.setBounds(310, 16, 170, 24);
+    // 1. Navigation Tabs (Slate Trigger 2 Style)
+    const int tabY = 16;
+    const int tabH = 26;
+    const int tabW = 86;
+    int tabX = 165;
 
-    // Mix & Output Knobs on right
-    mixLabel.setBounds(w - 180, 4, 48, 12);
-    mixSlider.setBounds(w - 180, 14, 48, 44);
+    browserTabButton.setBounds(tabX, tabY, tabW, tabH);
+    tabX += tabW + 6;
+    triggerTabButton.setBounds(tabX, tabY, tabW, tabH);
+    tabX += tabW + 6;
+    settingsTabButton.setBounds(tabX, tabY, tabW, tabH);
 
-    outLabel.setBounds(w - 115, 4, 48, 12);
-    outputGainSlider.setBounds(w - 115, 14, 48, 44);
+    // 2. Preset Selection
+    const int presetX = tabX + tabW + 16;
+    prevPresetBtn.setBounds(presetX, tabY, 24, tabH);
+    presetBox.setBounds(presetX + 26, tabY, 150, tabH);
+    nextPresetBtn.setBounds(presetX + 178, tabY, 24, tabH);
+
+    // 3. Master Controls on Right
+    inputGainSlider.setBounds(w - 225, 12, 44, 46);
+    inLabel.setBounds(w - 225, 2, 44, 10);
+
+    mixSlider.setBounds(w - 150, 12, 44, 46);
+    mixLabel.setBounds(w - 150, 2, 44, 10);
+
+    outputGainSlider.setBounds(w - 82, 12, 44, 46);
+    outLabel.setBounds(w - 82, 2, 44, 10);
 }
 
 } // namespace yeahwaah
