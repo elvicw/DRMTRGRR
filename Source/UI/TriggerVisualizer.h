@@ -6,7 +6,8 @@
 namespace yeahwaah
 {
 
-class TriggerVisualizer : public juce::Component
+class TriggerVisualizer : public juce::Component,
+                          public juce::FileDragAndDropTarget
 {
 public:
     TriggerVisualizer(VisualizerBuffer& visualizerBuffer, juce::RangedAudioParameter* detailParameter);
@@ -19,8 +20,16 @@ public:
     void mouseDrag(const juce::MouseEvent& e) override;
     void mouseUp(const juce::MouseEvent& e) override;
 
+    // File Drag and Drop directly onto the Visualizer
+    bool isInterestedInFileDrag(const juce::StringArray& files) override;
+    void fileDragEnter(const juce::StringArray& files, int x, int y) override;
+    void fileDragExit(const juce::StringArray& files) override;
+    void filesDropped(const juce::StringArray& files, int x, int y) override;
+
     void updateWaveform();
     void setAuditionMode(bool auditioning) { isAuditioning = auditioning; }
+
+    std::function<void(const juce::File&)> onSampleDropped;
 
 private:
     VisualizerBuffer& visualizer;
@@ -31,6 +40,7 @@ private:
 
     bool isDraggingDetail = false;
     bool isAuditioning = false;
+    bool isDragHovered = false;
 
     float detailDb = -24.0f;
 

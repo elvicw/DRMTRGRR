@@ -18,6 +18,14 @@ DrmtrgrrAudioProcessorEditor::DrmtrgrrAudioProcessorEditor(DrmtrgrrAudioProcesso
     addAndMakeVisible(detectorPanel);
     addAndMakeVisible(slotRack);
 
+    // Dropping a sample on the main visualizer loads into Slot 1
+    visualizer.onSampleDropped = [this](const juce::File& file) {
+        if (audioProcessor.getSlot(0).loadFromFile(file, audioProcessor.getFormatManager()))
+        {
+            slotRack.updateMeters();
+        }
+    };
+
     setSize(1040, 720);
     setResizable(true, true);
     setResizeLimits(960, 680, 1600, 1100);

@@ -176,10 +176,57 @@ void TriggerVisualizer::paint(juce::Graphics& g)
     // Frame border
     g.setColour(SlateLookAndFeel::slateBorder);
     g.drawRect(0, 0, width, height, 1);
+
+    // Drag-and-drop overlay indicator
+    if (isDragHovered)
+    {
+        g.setColour(SlateLookAndFeel::cyanGlow.withAlpha(0.2f));
+        g.fillRect(0, 0, width, height);
+        g.setColour(SlateLookAndFeel::cyanGlow);
+        g.drawRect(1, 1, width - 2, height - 2, 2);
+
+        g.setFont(juce::Font(15.0f, juce::Font::bold));
+        g.setColour(juce::Colours::white);
+        g.drawText("DROP SAMPLE AUDIO FILE TO LOAD INTO SLOT 1", 0, 0, width, height, juce::Justification::centred);
+    }
 }
 
 void TriggerVisualizer::resized()
 {
+}
+
+bool TriggerVisualizer::isInterestedInFileDrag(const juce::StringArray& files)
+{
+    for (const auto& f : files)
+    {
+        if (f.endsWithIgnoreCase(".wav") || f.endsWithIgnoreCase(".aif") ||
+            f.endsWithIgnoreCase(".aiff") || f.endsWithIgnoreCase(".mp3") ||
+            f.endsWithIgnoreCase(".flac"))
+            return true;
+    }
+    return false;
+}
+
+void TriggerVisualizer::fileDragEnter(const juce::StringArray& /*files*/, int /*x*/, int /*y*/)
+{
+    isDragHovered = true;
+    repaint();
+}
+
+void TriggerVisualizer::fileDragExit(const juce::StringArray& /*files*/)
+{
+    isDragHovered = false;
+    repaint();
+}
+
+void TriggerVisualizer::filesDropped(const juce::StringArray& files, int /*x*/, int /*y*/)
+{
+    isDragHovered = false;
+    if (onSampleDropped && !files.isEmpty())
+    {
+        onSampleDropped(juce::File(files[0]));
+    }
+    repaint();
 }
 
 void TriggerVisualizer::mouseDown(const juce::MouseEvent& e)

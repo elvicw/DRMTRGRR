@@ -155,8 +155,21 @@ bool SingleSlotStrip::isInterestedInFileDrag(const juce::StringArray& files)
     return false;
 }
 
+void SingleSlotStrip::fileDragEnter(const juce::StringArray& /*files*/, int /*x*/, int /*y*/)
+{
+    isDragHovered = true;
+    repaint();
+}
+
+void SingleSlotStrip::fileDragExit(const juce::StringArray& /*files*/)
+{
+    isDragHovered = false;
+    repaint();
+}
+
 void SingleSlotStrip::filesDropped(const juce::StringArray& files, int /*x*/, int /*y*/)
 {
+    isDragHovered = false;
     if (!files.isEmpty())
     {
         juce::File f(files[0]);
@@ -248,6 +261,19 @@ void SingleSlotStrip::paint(juce::Graphics& g)
     g.setColour(SlateLookAndFeel::textDim);
     g.drawText("ATT / DEC", 10, h - 54, w - 20, 10, juce::Justification::centred);
     g.drawText("VEL RANGE", 10, h - 28, w - 20, 10, juce::Justification::centred);
+
+    // Drag-and-drop hover glow overlay
+    if (isDragHovered)
+    {
+        g.setColour(SlateLookAndFeel::cyanGlow.withAlpha(0.25f));
+        g.fillRoundedRectangle(2.0f, 2.0f, (float)w - 4.0f, (float)h - 4.0f, 4.0f);
+        g.setColour(SlateLookAndFeel::cyanGlow);
+        g.drawRoundedRectangle(2.0f, 2.0f, (float)w - 4.0f, (float)h - 4.0f, 4.0f, 2.0f);
+
+        g.setFont(juce::Font(12.5f, juce::Font::bold));
+        g.setColour(juce::Colours::white);
+        g.drawText("DROP SAMPLE", 0, h / 2 - 12, w, 24, juce::Justification::centred);
+    }
 }
 
 void SingleSlotStrip::resized()
