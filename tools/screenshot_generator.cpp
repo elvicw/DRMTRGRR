@@ -33,6 +33,12 @@ int main()
         proc.getSlot(i).loadFactoryDrum(static_cast<yeahwaah::FactoryDrumType>(i % static_cast<int>(yeahwaah::FactoryDrumType::Count)));
     }
 
+    // Trigger test hits to illuminate meters and indicators
+    proc.triggerSlotManually(0, 0.96f);
+    proc.triggerSlotManually(1, 0.84f);
+    proc.triggerSlotManually(2, 0.68f);
+    proc.triggerSlotManually(3, 0.45f);
+
     std::unique_ptr<juce::AudioProcessorEditor> editor(proc.createEditorIfNeeded());
     if (!editor)
     {
@@ -40,8 +46,9 @@ int main()
         return 1;
     }
 
-    editor->setSize(1080, 750);
+    editor->setSize(1240, 860);
     editor->setVisible(true);
+    std::cout << "Editor bounds: " << editor->getBounds().toString() << std::endl;
 
     auto* typedEditor = dynamic_cast<yeahwaah::DrmtrgrrAudioProcessorEditor*>(editor.get());
     if (typedEditor != nullptr)
@@ -54,6 +61,7 @@ int main()
 
     juce::File outFile = juce::File::getCurrentWorkingDirectory().getChildFile("assets/screenshot.png");
     outFile.getParentDirectory().createDirectory();
+    outFile.deleteFile();
 
     juce::FileOutputStream fos(outFile);
     if (fos.openedOk())

@@ -131,11 +131,7 @@ Copy `DRMTRGRR.vst3` to `C:\Program Files\Common Files\VST3\`.
 
 ## Automated CI/CD (GitHub Actions)
 
-The repository includes a continuous integration workflow (`.github/workflows/build.yml`) that triggers on every push and pull request. It automatically compiles both:
-1. **Windows 2022 x64** VST3 & Standalone binaries
-2. **macOS Universal** VST3, AU, and Standalone app binaries
-
-And attaches them as downloadable release artifacts!
+The repository includes a continuous integration workflow (`.github/workflows/build.yml`) that builds the **Windows 2022 x64** VST3 and Standalone binaries. On version tags, it publishes the Windows package to a GitHub Release and embeds the interface screenshot in the release notes. The automated workflow currently targets Windows only.
 
 ---
 

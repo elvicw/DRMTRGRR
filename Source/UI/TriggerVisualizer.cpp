@@ -157,33 +157,52 @@ void TriggerVisualizer::paint(juce::Graphics& g)
     for (float x = xStart; x < xEnd; x += 55.0f)
         g.drawVerticalLine(static_cast<int>(x), 8.0f, static_cast<float>(height) - 8.0f);
 
-    // 4. Render Incoming Audio Waveform (Multi-Stop Electric Neon Glow)
+    // 4. Render Incoming Audio Waveform (Multi-Stop Electric Neon Glow with Peak Envelope)
     if (!waveformData.empty())
     {
         const int numPoints = static_cast<int>(waveformData.size());
         const float xRange = xEnd - xStart;
-        const float step = xRange / static_cast<float>(numPoints);
+        const int pixelWidth = std::max(1, static_cast<int>(xRange));
 
         juce::Path wavePath;
         juce::Path fillPath;
 
-        float firstY = dbToY(juce::Decibels::gainToDecibels(std::abs(waveformData[0]) + 1e-5f), static_cast<float>(height));
-        wavePath.startNewSubPath(xStart, firstY);
-        fillPath.startNewSubPath(xStart, static_cast<float>(height) - 12.0f);
-        fillPath.lineTo(xStart, firstY);
+        const float baselineY = static_cast<float>(height) - 12.0f;
+        fillPath.startNewSubPath(xStart, baselineY);
 
-        for (int i = 1; i < numPoints; ++i)
+        bool pathStarted = false;
+
+        for (int px = 0; px < pixelWidth; ++px)
         {
-            float curX = xStart + static_cast<float>(i) * step;
-            float absAmp = std::abs(waveformData[static_cast<size_t>(i)]) + 1e-5f;
-            float curDb = juce::Decibels::gainToDecibels(absAmp);
+            float curX = xStart + static_cast<float>(px);
+            int startIdx = px * numPoints / pixelWidth;
+            int endIdx = std::min(numPoints, (px + 1) * numPoints / pixelWidth);
+
+            float maxAmp = 0.0f;
+            for (int s = startIdx; s < endIdx; ++s)
+            {
+                float a = std::abs(waveformData[static_cast<size_t>(s)]);
+                if (a > maxAmp)
+                    maxAmp = a;
+            }
+
+            float curDb = juce::Decibels::gainToDecibels(maxAmp + 1e-4f);
             float curY = dbToY(curDb, static_cast<float>(height));
 
-            wavePath.lineTo(curX, curY);
-            fillPath.lineTo(curX, curY);
+            if (!pathStarted)
+            {
+                wavePath.startNewSubPath(curX, curY);
+                fillPath.lineTo(curX, curY);
+                pathStarted = true;
+            }
+            else
+            {
+                wavePath.lineTo(curX, curY);
+                fillPath.lineTo(curX, curY);
+            }
         }
 
-        fillPath.lineTo(xStart + xRange, static_cast<float>(height) - 12.0f);
+        fillPath.lineTo(xEnd, baselineY);
         fillPath.closeSubPath();
 
         // Multi-stop neon wave fill gradient

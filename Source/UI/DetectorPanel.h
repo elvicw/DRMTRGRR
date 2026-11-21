@@ -17,33 +17,33 @@ public:
 private:
     juce::AudioProcessorValueTreeState& apvts;
 
-    // 1. Transient Detection Engine Knobs
+    // 1. Transient Detection Engine Knobs (SSL Knobs)
     juce::Slider inputGainSlider;
     juce::Slider detailSlider;
     juce::Slider sensitivitySlider;
     juce::Slider retriggerSlider;
     juce::Slider dynamicsSlider;
 
-    // 2. Filter Controls
+    // 2. SSL Filter Section
     juce::Slider lowCutSlider;
     juce::Slider highCutSlider;
-    juce::TextButton auditionButton { "AUDITION" };
+    juce::TextButton auditionButton { "LISTEN" };
 
-    // 3. Gate Controls
-    juce::ToggleButton gateEnableButton { "GATE ON" };
+    // 3. SSL Transient Gate Section
+    juce::TextButton gateEnableButton { "GATE ON" };
     juce::Slider gateThresholdSlider;
     juce::Slider gateAttackSlider;
     juce::Slider gateHoldSlider;
     juce::Slider gateReleaseSlider;
 
-    // 4. Leakage Suppression & MIDI
-    juce::ToggleButton leakageEnableButton { "BLEED CANCEL" };
+    // 4. Bleed Suppression & MIDI Section
+    juce::TextButton leakageEnableButton { "BLEED CANCEL" };
     juce::Slider leakageAmountSlider;
-    juce::ToggleButton midiOutButton { "MIDI OUT" };
+    juce::TextButton midiOutButton { "MIDI OUT" };
     juce::Slider midiNoteSlider;
     juce::Slider midiChannelSlider;
 
-    // Labels
+    // SSL Silkscreen Labels
     juce::Label inputGainLabel, detailLabel, sensLabel, retriggerLabel, dynLabel;
     juce::Label lowCutLabel, highCutLabel;
     juce::Label gateThreshLabel, gateAttLabel, gateHldLabel, gateRelLabel;

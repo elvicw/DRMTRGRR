@@ -52,10 +52,18 @@ juce::AudioProcessorValueTreeState::ParameterLayout DrmtrgrrAudioProcessor::crea
         "dynamics", "Dynamics", juce::NormalisableRange<float>(0.0f, 100.0f, 0.5f), 75.0f));
 
     params.push_back(std::make_unique<juce::AudioParameterFloat>(
-        "lowCut", "Low-Cut", juce::NormalisableRange<float>(20.0f, 2000.0f, 1.0f, 0.35f), 60.0f));
+        "lowCut", "Low-Cut", juce::NormalisableRange<float>(20.0f, 2000.0f, 1.0f, 0.35f), 60.0f,
+        juce::String(), juce::AudioProcessorParameter::genericParameter,
+        [](float val, int) { return juce::String(static_cast<int>(val)) + " Hz"; }));
 
     params.push_back(std::make_unique<juce::AudioParameterFloat>(
-        "highCut", "High-Cut", juce::NormalisableRange<float>(200.0f, 20000.0f, 1.0f, 0.35f), 4500.0f));
+        "highCut", "High-Cut", juce::NormalisableRange<float>(200.0f, 20000.0f, 1.0f, 0.35f), 4500.0f,
+        juce::String(), juce::AudioProcessorParameter::genericParameter,
+        [](float val, int) {
+            if (val >= 1000.0f)
+                return juce::String(val / 1000.0f, 1) + " kHz";
+            return juce::String(static_cast<int>(val)) + " Hz";
+        }));
 
     params.push_back(std::make_unique<juce::AudioParameterBool>(
         "auditionFilter", "Listen Filter", false));
@@ -109,13 +117,29 @@ juce::AudioProcessorValueTreeState::ParameterLayout DrmtrgrrAudioProcessor::crea
             prefix + "enable", namePrefix + "Enable", true));
 
         params.push_back(std::make_unique<juce::AudioParameterFloat>(
-            prefix + "volume", namePrefix + "Volume", juce::NormalisableRange<float>(-60.0f, 12.0f, 0.1f), 0.0f));
+            prefix + "volume", namePrefix + "Volume", juce::NormalisableRange<float>(-60.0f, 12.0f, 0.1f), 0.0f,
+            juce::String(), juce::AudioProcessorParameter::genericParameter,
+            [](float val, int) {
+                if (val <= -59.5f) return juce::String("-inf dB");
+                return juce::String(val, 1) + " dB";
+            }));
 
         params.push_back(std::make_unique<juce::AudioParameterFloat>(
-            prefix + "pan", namePrefix + "Pan", juce::NormalisableRange<float>(-1.0f, 1.0f, 0.01f), 0.0f));
+            prefix + "pan", namePrefix + "Pan", juce::NormalisableRange<float>(-1.0f, 1.0f, 0.01f), 0.0f,
+            juce::String(), juce::AudioProcessorParameter::genericParameter,
+            [](float val, int) {
+                int pct = static_cast<int>(std::round(val * 100.0f));
+                if (pct == 0) return juce::String("C");
+                if (pct < 0) return juce::String(-pct) + "L";
+                return juce::String(pct) + "R";
+            }));
 
         params.push_back(std::make_unique<juce::AudioParameterFloat>(
-            prefix + "tune", namePrefix + "Tune", juce::NormalisableRange<float>(-24.0f, 24.0f, 0.1f), 0.0f));
+            prefix + "tune", namePrefix + "Tune", juce::NormalisableRange<float>(-24.0f, 24.0f, 0.1f), 0.0f,
+            juce::String(), juce::AudioProcessorParameter::genericParameter,
+            [](float val, int) {
+                return juce::String(val, 1) + " st";
+            }));
 
         params.push_back(std::make_unique<juce::AudioParameterBool>(
             prefix + "phase", namePrefix + "Phase Invert", false));

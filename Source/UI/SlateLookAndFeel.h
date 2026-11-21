@@ -10,7 +10,7 @@ public:
     SlateLookAndFeel();
     ~SlateLookAndFeel() override = default;
 
-    // Custom styling overrides
+    // Custom styling overrides for SSL Console + Slate Trigger 2
     void drawRotarySlider(juce::Graphics& g, int x, int y, int width, int height,
                           float sliderPosProportional, float rotaryStartAngle,
                           float rotaryEndAngle, juce::Slider& slider) override;
@@ -44,7 +44,9 @@ public:
                            const juce::String& text, const juce::String& shortcutKeyText,
                            const juce::Drawable* icon, const juce::Colour* textColour) override;
 
-    // Steven Slate Drums Trigger 2 Color Palette
+    juce::Font getLabelFont(juce::Label& label) override;
+
+    // Steven Slate Drums Trigger 2 & SSL Console Color Palette
     static const juce::Colour bgDark;
     static const juce::Colour bgPanel;
     static const juce::Colour bgControl;
@@ -57,6 +59,17 @@ public:
     static const juce::Colour soloYellow;
     static const juce::Colour muteRed;
     static const juce::Colour phaseBlue;
+
+    // SSL Console Channel Colors
+    static const juce::Colour sslBlue;
+    static const juce::Colour sslGreen;
+    static const juce::Colour sslYellow;
+    static const juce::Colour sslRed;
+    static const juce::Colour sslAmber;
+    static const juce::Colour sslCyan;
+    static const juce::Colour sslWhite;
+    static const juce::Colour sslDark;
+    static const juce::Colour sslPanel;
 
     // Channel color accents (Slots 1 to 6)
     static juce::Colour getSlotColor(int slotIndex);

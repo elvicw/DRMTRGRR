@@ -96,3 +96,13 @@ target_link_libraries(DRMTRGRR
         juce::juce_recommended_lto_flags
         juce::juce_recommended_warning_flags
 )
+
+# Screenshot Generator Tool
+add_executable(generate_screenshot tools/screenshot_generator.cpp)
+target_compile_definitions(generate_screenshot PRIVATE JUCE_GLOBAL_MODULE_SETTINGS_INCLUDED=1)
+target_link_libraries(generate_screenshot PRIVATE
+    DRMTRGRR
+    juce::juce_audio_utils
+    juce::juce_gui_basics
+    juce::juce_graphics
+)

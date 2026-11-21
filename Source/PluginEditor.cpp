@@ -40,9 +40,9 @@ DrmtrgrrAudioProcessorEditor::DrmtrgrrAudioProcessorEditor(DrmtrgrrAudioProcesso
 
     updateActiveTabView(ActiveTab::Trigger);
 
-    setSize(1080, 750);
+    setSize(1240, 860);
     setResizable(true, true);
-    setResizeLimits(1000, 700, 1600, 1100);
+    setResizeLimits(1060, 740, 1800, 1200);
 
     startTimerHz(35); // Smooth 35 FPS UI animation
 }
@@ -84,16 +84,16 @@ void DrmtrgrrAudioProcessorEditor::resized()
 {
     auto area = getLocalBounds();
 
-    const int headerHeight = 62;
+    const int headerHeight = 70;
     headerBar.setBounds(area.removeFromTop(headerHeight));
 
-    const int rackHeight = 365;
+    const int rackHeight = 410;
     slotRack.setBounds(area.removeFromBottom(rackHeight));
 
     // Middle area is occupied by the active tab
     if (visualizer.isVisible())
     {
-        const int visHeight = 190;
+        const int visHeight = 210;
         visualizer.setBounds(area.removeFromTop(visHeight));
         detectorPanel.setBounds(area);
     }

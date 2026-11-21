@@ -33,8 +33,8 @@ private:
     bool isDragHovered = false;
     juce::Colour slotThemeColor;
 
-    // Controls
-    juce::ToggleButton enableButton;
+    // SSL Channel Strip Controls
+    juce::TextButton enableButton { "ON" };
     juce::Label nameLabel;
     juce::TextButton loadButton { "LOAD" };
     juce::TextButton factoryButton { "FACTORY" };
@@ -46,14 +46,15 @@ private:
 
     juce::ToggleButton soloButton { "S" };
     juce::ToggleButton muteButton { "M" };
-    juce::ToggleButton phaseButton { "ø" };
+    juce::ToggleButton phaseButton { juce::CharPointer_UTF8("\xc3\x98") };
 
     juce::Slider attackSlider;
     juce::Slider decaySlider;
     juce::Slider minVelSlider;
     juce::Slider maxVelSlider;
 
-    juce::Label volLabel, panLabel, tuneLabel;
+    juce::Label panLabel, tuneLabel;
+    juce::Label attLabel, decLabel, minVelLabel, maxVelLabel;
 
     std::unique_ptr<juce::FileChooser> fileChooser;
     std::vector<float> waveformThumbnail;
@@ -78,6 +79,7 @@ private:
 
     void chooseSampleFile();
     void cycleFactoryDrum();
+    void updateEnableButtonText();
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(SingleSlotStrip)
 };
