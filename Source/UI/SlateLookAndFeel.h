@@ -24,23 +24,42 @@ public:
                               bool shouldDrawButtonAsHighlighted,
                               bool shouldDrawButtonAsDown) override;
 
+    void drawButtonText(juce::Graphics& g, juce::TextButton& button,
+                        bool shouldDrawButtonAsHighlighted,
+                        bool shouldDrawButtonAsDown) override;
+
+    void drawToggleButton(juce::Graphics& g, juce::ToggleButton& button,
+                          bool shouldDrawButtonAsHighlighted,
+                          bool shouldDrawButtonAsDown) override;
+
     void drawComboBox(juce::Graphics& g, int width, int height, bool isButtonDown,
                       int buttonX, int buttonY, int buttonW, int buttonH,
                       juce::ComboBox& box) override;
 
     void drawPopupMenuBackground(juce::Graphics& g, int width, int height) override;
 
-    // Slate Color Palette
+    void drawPopupMenuItem(juce::Graphics& g, const juce::Rectangle<int>& area,
+                           bool isSeparator, bool isActive, bool isHighlighted,
+                           bool isTicked, bool hasSubMenu,
+                           const juce::String& text, const juce::String& shortcutKeyText,
+                           const juce::Drawable* icon, const juce::Colour* textColour) override;
+
+    // Steven Slate Drums Trigger 2 Color Palette
     static const juce::Colour bgDark;
     static const juce::Colour bgPanel;
     static const juce::Colour bgControl;
     static const juce::Colour cyanGlow;
     static const juce::Colour amberGlow;
     static const juce::Colour slateBorder;
+    static const juce::Colour slateHighlight;
     static const juce::Colour textLight;
     static const juce::Colour textDim;
     static const juce::Colour soloYellow;
     static const juce::Colour muteRed;
+    static const juce::Colour phaseBlue;
+
+    // Channel color accents (Slots 1 to 6)
+    static juce::Colour getSlotColor(int slotIndex);
 };
 
 } // namespace yeahwaah

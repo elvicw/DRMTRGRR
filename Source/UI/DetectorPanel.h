@@ -17,26 +17,26 @@ public:
 private:
     juce::AudioProcessorValueTreeState& apvts;
 
-    // Transient Detection Knobs
+    // 1. Transient Detection Engine Knobs
     juce::Slider inputGainSlider;
     juce::Slider detailSlider;
     juce::Slider sensitivitySlider;
     juce::Slider retriggerSlider;
     juce::Slider dynamicsSlider;
 
-    // Filter Controls
+    // 2. Filter Controls
     juce::Slider lowCutSlider;
     juce::Slider highCutSlider;
-    juce::TextButton auditionButton { "LISTEN" };
+    juce::TextButton auditionButton { "AUDITION" };
 
-    // Gate Controls
-    juce::ToggleButton gateEnableButton { "GATE" };
+    // 3. Gate Controls
+    juce::ToggleButton gateEnableButton { "GATE ON" };
     juce::Slider gateThresholdSlider;
     juce::Slider gateAttackSlider;
     juce::Slider gateHoldSlider;
     juce::Slider gateReleaseSlider;
 
-    // Leakage & MIDI
+    // 4. Leakage Suppression & MIDI
     juce::ToggleButton leakageEnableButton { "BLEED CANCEL" };
     juce::Slider leakageAmountSlider;
     juce::ToggleButton midiOutButton { "MIDI OUT" };
@@ -75,7 +75,7 @@ private:
     std::unique_ptr<SliderAttachment> midiNoteAtt;
     std::unique_ptr<SliderAttachment> midiChannelAtt;
 
-    void setupKnob(juce::Slider& s, juce::Label& l, const juce::String& text, const juce::String& suffix);
+    void setupKnob(juce::Slider& s, juce::Label& l, const juce::String& name, const juce::String& text, const juce::String& suffix);
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(DetectorPanel)
 };

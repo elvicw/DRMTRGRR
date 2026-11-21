@@ -33,9 +33,12 @@ private:
     std::unique_ptr<juce::FileTreeComponent> fileTree;
 
     juce::Label previewTitleLabel;
+    juce::Label metadataLabel;
     juce::TextButton auditionButton { "▶ AUDITION" };
-    juce::TextButton loadToSlot1Button { "LOAD INTO CHAN 1" };
-    juce::TextButton loadToSlot2Button { "LOAD INTO CHAN 2" };
+    juce::ToggleButton autoAuditionToggle { "Auto-Audition on select" };
+
+    // 6 Direct Load buttons for the 6 instrument channels
+    std::vector<std::unique_ptr<juce::TextButton>> loadButtons;
 
     juce::AudioTransportSource transportSource;
     std::unique_ptr<juce::AudioFormatReaderSource> currentAudioSource;

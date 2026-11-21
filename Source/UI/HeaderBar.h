@@ -34,14 +34,14 @@ private:
 
     // Slate Trigger 2 Navigation Tabs
     juce::TextButton browserTabButton { "BROWSER" };
-    juce::TextButton triggerTabButton { "TRIGGER" };
+    juce::TextButton triggerTabButton { "TRIGGERING" };
     juce::TextButton settingsTabButton { "SETTINGS" };
     ActiveTab currentTab = ActiveTab::Trigger;
 
     // Presets
-    juce::TextButton prevPresetBtn { "◀" };
+    juce::TextButton prevPresetBtn { "<" };
     juce::ComboBox presetBox;
-    juce::TextButton nextPresetBtn { "▶" };
+    juce::TextButton nextPresetBtn { ">" };
 
     // Master Knobs
     juce::Slider inputGainSlider;

@@ -54,7 +54,7 @@ public:
     // Copies recent waveform history into destination buffer (chronological order)
     void getWaveform(std::vector<float>& dest) const
     {
-        dest.resize(bufferSize);
+        dest.resize(static_cast<size_t>(bufferSize));
         int currentWrite = writeIndex.load(std::memory_order_acquire);
         for (size_t i = 0; i < static_cast<size_t>(bufferSize); ++i)
         {

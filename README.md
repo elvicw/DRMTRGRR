@@ -4,6 +4,10 @@
 
 Inspired by the industry-standard workflow and aesthetic of Slate Digital Trigger 2, **DRMTRGRR** brings a dark brushed-slate analog interface, real-time transient oscilloscope visualization, interactive draggable threshold detection, multi-slot drum sample layering, transient-driven gating, crosstalk leakage suppression, and full MIDI I/O.
 
+<p align="center">
+  <img src="assets/screenshot.png" alt="DRMTRGRR GUI Preview" width="920">
+</p>
+
 ---
 
 ## Key Features & Slate Trigger 2 Comparison

@@ -7,7 +7,11 @@ namespace yeahwaah
 DrmtrgrrAudioProcessorEditor::DrmtrgrrAudioProcessorEditor(DrmtrgrrAudioProcessor& p)
     : AudioProcessorEditor(&p), audioProcessor(p),
       headerBar(p),
-      visualizer(p.getVisualizerBuffer(), p.getAPVTS().getParameter("detail")),
+      visualizer(p.getVisualizerBuffer(),
+                 p.getAPVTS().getParameter("detail"),
+                 p.getAPVTS().getParameter("lowCut"),
+                 p.getAPVTS().getParameter("highCut"),
+                 p.getAPVTS().getParameter("retrigger")),
       detectorPanel(p.getAPVTS()),
       browserView(p),
       settingsView(p),
@@ -36,9 +40,9 @@ DrmtrgrrAudioProcessorEditor::DrmtrgrrAudioProcessorEditor(DrmtrgrrAudioProcesso
 
     updateActiveTabView(ActiveTab::Trigger);
 
-    setSize(1040, 730);
+    setSize(1080, 750);
     setResizable(true, true);
-    setResizeLimits(980, 680, 1600, 1100);
+    setResizeLimits(1000, 700, 1600, 1100);
 
     startTimerHz(35); // Smooth 35 FPS UI animation
 }
@@ -80,7 +84,7 @@ void DrmtrgrrAudioProcessorEditor::resized()
 {
     auto area = getLocalBounds();
 
-    const int headerHeight = 60;
+    const int headerHeight = 62;
     headerBar.setBounds(area.removeFromTop(headerHeight));
 
     const int rackHeight = 365;
@@ -89,7 +93,7 @@ void DrmtrgrrAudioProcessorEditor::resized()
     // Middle area is occupied by the active tab
     if (visualizer.isVisible())
     {
-        const int visHeight = 185;
+        const int visHeight = 190;
         visualizer.setBounds(area.removeFromTop(visHeight));
         detectorPanel.setBounds(area);
     }

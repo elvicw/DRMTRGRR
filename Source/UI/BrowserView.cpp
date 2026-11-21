@@ -17,10 +17,16 @@ BrowserView::BrowserView(DrmtrgrrAudioProcessor& proc)
     addAndMakeVisible(*fileTree);
 
     previewTitleLabel.setText("SELECT A DRUM SAMPLE TO PREVIEW", juce::dontSendNotification);
-    previewTitleLabel.setFont(juce::Font(12.0f, juce::Font::bold));
+    previewTitleLabel.setFont(juce::Font(12.5f, juce::Font::bold));
     previewTitleLabel.setColour(juce::Label::textColourId, SlateLookAndFeel::textLight);
     previewTitleLabel.setJustificationType(juce::Justification::centred);
     addAndMakeVisible(previewTitleLabel);
+
+    metadataLabel.setText("No file selected", juce::dontSendNotification);
+    metadataLabel.setFont(juce::Font(10.0f, juce::Font::plain));
+    metadataLabel.setColour(juce::Label::textColourId, SlateLookAndFeel::textDim);
+    metadataLabel.setJustificationType(juce::Justification::centred);
+    addAndMakeVisible(metadataLabel);
 
     auditionButton.onClick = [this] {
         if (currentlySelectedFile.existsAsFile())
@@ -28,11 +34,17 @@ BrowserView::BrowserView(DrmtrgrrAudioProcessor& proc)
     };
     addAndMakeVisible(auditionButton);
 
-    loadToSlot1Button.onClick = [this] { loadSelectedFileIntoSlot(0); };
-    addAndMakeVisible(loadToSlot1Button);
+    autoAuditionToggle.setToggleState(false, juce::dontSendNotification);
+    addAndMakeVisible(autoAuditionToggle);
 
-    loadToSlot2Button.onClick = [this] { loadSelectedFileIntoSlot(1); };
-    addAndMakeVisible(loadToSlot2Button);
+    // Create 6 channel target buttons
+    for (int i = 0; i < DrmtrgrrAudioProcessor::NumSlots; ++i)
+    {
+        auto btn = std::make_unique<juce::TextButton>("LOAD INTO CH " + juce::String(i + 1));
+        btn->onClick = [this, i] { loadSelectedFileIntoSlot(i); };
+        addAndMakeVisible(*btn);
+        loadButtons.push_back(std::move(btn));
+    }
 }
 
 BrowserView::~BrowserView()
@@ -50,6 +62,8 @@ void BrowserView::selectionChanged()
         currentlySelectedFile = selectedFile;
         previewTitleLabel.setText(selectedFile.getFileName(), juce::dontSendNotification);
         extractPreviewWaveform(selectedFile);
+        if (autoAuditionToggle.getToggleState())
+            auditionFile(selectedFile);
         repaint();
     }
 }
@@ -61,6 +75,8 @@ void BrowserView::fileClicked(const juce::File& file, const juce::MouseEvent& /*
         currentlySelectedFile = file;
         previewTitleLabel.setText(file.getFileName(), juce::dontSendNotification);
         extractPreviewWaveform(file);
+        if (autoAuditionToggle.getToggleState())
+            auditionFile(file);
         repaint();
     }
 }
@@ -104,10 +120,22 @@ void BrowserView::extractPreviewWaveform(const juce::File& file)
 {
     previewWaveform.assign(128, 0.0f);
     std::unique_ptr<juce::AudioFormatReader> reader(processor.getFormatManager().createReaderFor(file));
-    if (reader == nullptr) return;
+    if (reader == nullptr)
+    {
+        metadataLabel.setText("Unsupported audio format", juce::dontSendNotification);
+        return;
+    }
 
-    juce::AudioBuffer<float> tempBuffer(1, (int)reader->lengthInSamples);
-    reader->read(&tempBuffer, 0, (int)reader->lengthInSamples, 0, true, false);
+    double lengthSec = static_cast<double>(reader->lengthInSamples) / reader->sampleRate;
+    juce::String meta = "Sample Rate: " + juce::String(static_cast<int>(reader->sampleRate)) + " Hz | "
+                        + juce::String(reader->numChannels) + " Channels | "
+                        + juce::String(reader->bitsPerSample) + "-bit | "
+                        + juce::String(lengthSec, 2) + " sec | "
+                        + juce::File::descriptionOfSizeInBytes(file.getSize());
+    metadataLabel.setText(meta, juce::dontSendNotification);
+
+    juce::AudioBuffer<float> tempBuffer(1, static_cast<int>(reader->lengthInSamples));
+    reader->read(&tempBuffer, 0, static_cast<int>(reader->lengthInSamples), 0, true, false);
 
     const float* src = tempBuffer.getReadPointer(0);
     int len = tempBuffer.getNumSamples();
@@ -137,8 +165,8 @@ void BrowserView::paint(juce::Graphics& g)
     g.fillRect(0, 0, w, h);
 
     // Right Preview Pane
-    const int treeW = 380;
-    juce::Rectangle<float> previewBox(treeW + 12.0f, 10.0f, (float)w - treeW - 24.0f, (float)h - 20.0f);
+    const int treeW = 360;
+    juce::Rectangle<float> previewBox(static_cast<float>(treeW) + 12.0f, 8.0f, static_cast<float>(w) - static_cast<float>(treeW) - 20.0f, static_cast<float>(h) - 16.0f);
 
     g.setColour(SlateLookAndFeel::bgPanel);
     g.fillRoundedRectangle(previewBox, 4.0f);
@@ -146,18 +174,22 @@ void BrowserView::paint(juce::Graphics& g)
     g.drawRoundedRectangle(previewBox, 4.0f, 1.0f);
 
     // Waveform preview display box
-    juce::Rectangle<float> waveArea(previewBox.getX() + 16.0f, previewBox.getY() + 38.0f,
-                                    previewBox.getWidth() - 32.0f, 120.0f);
+    juce::Rectangle<float> waveArea(previewBox.getX() + 16.0f, previewBox.getY() + 48.0f,
+                                    previewBox.getWidth() - 32.0f, 95.0f);
 
     g.setColour(juce::Colour(0xff090c12));
     g.fillRoundedRectangle(waveArea, 3.0f);
     g.setColour(SlateLookAndFeel::slateBorder);
     g.drawRoundedRectangle(waveArea, 3.0f, 1.0f);
 
+    // Center guideline
+    g.setColour(juce::Colour(0xff161c28));
+    g.drawHorizontalLine(static_cast<int>(waveArea.getCentreY()), waveArea.getX() + 2.0f, waveArea.getRight() - 2.0f);
+
     // Render preview waveform
     if (!previewWaveform.empty())
     {
-        const int numPts = (int)previewWaveform.size();
+        const int numPts = static_cast<int>(previewWaveform.size());
         const float step = (waveArea.getWidth() - 4.0f) / static_cast<float>(numPts);
         const float midY = waveArea.getCentreY();
 
@@ -175,18 +207,34 @@ void BrowserView::resized()
 {
     const int w = getWidth();
     const int h = getHeight();
-    const int treeW = 380;
+    const int treeW = 360;
 
-    fileTree->setBounds(10, 10, treeW, h - 20);
+    fileTree->setBounds(8, 8, treeW, h - 16);
 
     const int rightX = treeW + 28;
-    const int rightW = w - treeW - 56;
+    const int rightW = w - treeW - 52;
 
-    previewTitleLabel.setBounds(rightX, 16, rightW, 24);
+    previewTitleLabel.setBounds(rightX, 10, rightW, 18);
+    metadataLabel.setBounds(rightX, 28, rightW, 16);
 
-    auditionButton.setBounds(rightX + rightW / 2 - 60, 180, 120, 28);
-    loadToSlot1Button.setBounds(rightX, 225, (rightW - 10) / 2, 28);
-    loadToSlot2Button.setBounds(rightX + (rightW - 10) / 2 + 10, 225, (rightW - 10) / 2, 28);
+    // Audition Button & Auto-Audition checkbox
+    auditionButton.setBounds(rightX + 16, 150, 140, 28);
+    autoAuditionToggle.setBounds(rightX + 170, 152, 200, 24);
+
+    // Channel routing buttons grid (2 rows of 3 buttons)
+    const int btnH = 26;
+    const int gap = 8;
+    const int colW = (rightW - 32 - gap * 2) / 3;
+
+    for (int i = 0; i < DrmtrgrrAudioProcessor::NumSlots; ++i)
+    {
+        int row = i / 3;
+        int col = i % 3;
+        int bx = rightX + 16 + col * (colW + gap);
+        int by = 188 + row * (btnH + gap);
+        if (i < static_cast<int>(loadButtons.size()))
+            loadButtons[static_cast<size_t>(i)]->setBounds(bx, by, colW, btnH);
+    }
 }
 
 } // namespace yeahwaah

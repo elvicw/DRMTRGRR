@@ -21,6 +21,9 @@ private:
     juce::Label versionLabel;
     juce::Label infoText;
 
+    juce::Label velCurveLabel;
+    juce::ComboBox velCurveBox;
+
     juce::TextButton restoreDefaultsButton { "RESTORE FACTORY DEFAULTS" };
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(SettingsView)

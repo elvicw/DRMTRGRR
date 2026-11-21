@@ -31,6 +31,7 @@ private:
     DrmtrgrrAudioProcessor& processor;
     SampleSlot& slot;
     bool isDragHovered = false;
+    juce::Colour slotThemeColor;
 
     // Controls
     juce::ToggleButton enableButton;
@@ -52,11 +53,13 @@ private:
     juce::Slider minVelSlider;
     juce::Slider maxVelSlider;
 
-    juce::Label volLabel, panLabel, tuneLabel, envLabel;
+    juce::Label volLabel, panLabel, tuneLabel;
 
     std::unique_ptr<juce::FileChooser> fileChooser;
     std::vector<float> waveformThumbnail;
     float currentPeak = 0.0f;
+    float peakHold = 0.0f;
+    int peakHoldTimer = 0;
 
     using SliderAttachment = juce::AudioProcessorValueTreeState::SliderAttachment;
     using ButtonAttachment = juce::AudioProcessorValueTreeState::ButtonAttachment;

@@ -1,5 +1,6 @@
 #include "DetectorPanel.h"
 #include "SlateLookAndFeel.h"
+#include <cmath>
 
 namespace yeahwaah
 {
@@ -7,27 +8,35 @@ namespace yeahwaah
 DetectorPanel::DetectorPanel(juce::AudioProcessorValueTreeState& vts)
     : apvts(vts)
 {
-    // 1. Detection Knobs
-    setupKnob(inputGainSlider, inputGainLabel, "INPUT TRIM", " dB");
+    // 1. Detection Engine Knobs
+    setupKnob(inputGainSlider, inputGainLabel, "InputTrim", "INPUT TRIM", " dB");
     inputGainAtt = std::make_unique<SliderAttachment>(apvts, "inputGain", inputGainSlider);
 
-    setupKnob(detailSlider, detailLabel, "DETAIL", " dB");
+    setupKnob(detailSlider, detailLabel, "Detail", "DETAIL", " dB");
     detailAtt = std::make_unique<SliderAttachment>(apvts, "detail", detailSlider);
 
-    setupKnob(sensitivitySlider, sensLabel, "SENSITIVITY", "%");
+    setupKnob(sensitivitySlider, sensLabel, "Sensitivity", "SENSITIVITY", "%");
     sensAtt = std::make_unique<SliderAttachment>(apvts, "sensitivity", sensitivitySlider);
 
-    setupKnob(retriggerSlider, retriggerLabel, "RETRIGGER", " ms");
+    setupKnob(retriggerSlider, retriggerLabel, "Retrigger", "RETRIGGER", " ms");
     retriggerAtt = std::make_unique<SliderAttachment>(apvts, "retrigger", retriggerSlider);
 
-    setupKnob(dynamicsSlider, dynLabel, "DYNAMICS", "%");
+    setupKnob(dynamicsSlider, dynLabel, "Dynamics", "DYNAMICS", "%");
     dynAtt = std::make_unique<SliderAttachment>(apvts, "dynamics", dynamicsSlider);
 
     // 2. Filter Knobs
-    setupKnob(lowCutSlider, lowCutLabel, "LOW-CUT", " Hz");
+    setupKnob(lowCutSlider, lowCutLabel, "LowCut", "LOW-CUT", " Hz");
+    lowCutSlider.textFromValueFunction = [](double val) {
+        return juce::String(static_cast<int>(val)) + " Hz";
+    };
     lowCutAtt = std::make_unique<SliderAttachment>(apvts, "lowCut", lowCutSlider);
 
-    setupKnob(highCutSlider, highCutLabel, "HIGH-CUT", " Hz");
+    setupKnob(highCutSlider, highCutLabel, "HighCut", "HIGH-CUT", "");
+    highCutSlider.textFromValueFunction = [](double val) {
+        if (val >= 1000.0)
+            return juce::String(val / 1000.0, 1) + " kHz";
+        return juce::String(static_cast<int>(val)) + " Hz";
+    };
     highCutAtt = std::make_unique<SliderAttachment>(apvts, "highCut", highCutSlider);
 
     auditionButton.setClickingTogglesState(true);
@@ -39,16 +48,16 @@ DetectorPanel::DetectorPanel(juce::AudioProcessorValueTreeState& vts)
     addAndMakeVisible(gateEnableButton);
     gateEnableAtt = std::make_unique<ButtonAttachment>(apvts, "gateEnable", gateEnableButton);
 
-    setupKnob(gateThresholdSlider, gateThreshLabel, "THRESHOLD", " dB");
+    setupKnob(gateThresholdSlider, gateThreshLabel, "GateThreshold", "THRESHOLD", " dB");
     gateThreshAtt = std::make_unique<SliderAttachment>(apvts, "gateThreshold", gateThresholdSlider);
 
-    setupKnob(gateAttackSlider, gateAttLabel, "ATTACK", " ms");
+    setupKnob(gateAttackSlider, gateAttLabel, "GateAttack", "ATTACK", " ms");
     gateAttAtt = std::make_unique<SliderAttachment>(apvts, "gateAttack", gateAttackSlider);
 
-    setupKnob(gateHoldSlider, gateHldLabel, "HOLD", " ms");
+    setupKnob(gateHoldSlider, gateHldLabel, "GateHold", "HOLD", " ms");
     gateHldAtt = std::make_unique<SliderAttachment>(apvts, "gateHold", gateHoldSlider);
 
-    setupKnob(gateReleaseSlider, gateRelLabel, "RELEASE", " ms");
+    setupKnob(gateReleaseSlider, gateRelLabel, "GateRelease", "RELEASE", " ms");
     gateRelAtt = std::make_unique<SliderAttachment>(apvts, "gateRelease", gateReleaseSlider);
 
     // 4. Leakage & MIDI
@@ -56,33 +65,34 @@ DetectorPanel::DetectorPanel(juce::AudioProcessorValueTreeState& vts)
     addAndMakeVisible(leakageEnableButton);
     leakageEnableAtt = std::make_unique<ButtonAttachment>(apvts, "leakageEnable", leakageEnableButton);
 
-    setupKnob(leakageAmountSlider, leakLabel, "AMOUNT", "%");
+    setupKnob(leakageAmountSlider, leakLabel, "LeakageAmount", "AMOUNT", "%");
     leakageAmountAtt = std::make_unique<SliderAttachment>(apvts, "leakageAmount", leakageAmountSlider);
 
     midiOutButton.setClickingTogglesState(true);
     addAndMakeVisible(midiOutButton);
     midiOutAtt = std::make_unique<ButtonAttachment>(apvts, "midiOutEnable", midiOutButton);
 
-    setupKnob(midiNoteSlider, midiNoteLabel, "NOTE", "");
+    setupKnob(midiNoteSlider, midiNoteLabel, "MidiNote", "NOTE", "");
     midiNoteSlider.textFromValueFunction = [](double v) {
         int note = static_cast<int>(v);
         return juce::MidiMessage::getMidiNoteName(note, true, true, 3);
     };
     midiNoteAtt = std::make_unique<SliderAttachment>(apvts, "midiNote", midiNoteSlider);
 
-    setupKnob(midiChannelSlider, midiChLabel, "CHANNEL", "");
+    setupKnob(midiChannelSlider, midiChLabel, "MidiChannel", "CHANNEL", "");
     midiChannelAtt = std::make_unique<SliderAttachment>(apvts, "midiChannel", midiChannelSlider);
 }
 
-void DetectorPanel::setupKnob(juce::Slider& s, juce::Label& l, const juce::String& text, const juce::String& suffix)
+void DetectorPanel::setupKnob(juce::Slider& s, juce::Label& l, const juce::String& name, const juce::String& text, const juce::String& suffix)
 {
+    s.setName(name);
     s.setSliderStyle(juce::Slider::RotaryHorizontalVerticalDrag);
-    s.setTextBoxStyle(juce::Slider::TextBoxBelow, false, 55, 16);
+    s.setTextBoxStyle(juce::Slider::TextBoxBelow, false, 52, 14);
     s.setTextValueSuffix(suffix);
     addAndMakeVisible(s);
 
     l.setText(text, juce::dontSendNotification);
-    l.setFont(juce::Font(9.5f, juce::Font::bold));
+    l.setFont(juce::Font(9.0f, juce::Font::bold));
     l.setJustificationType(juce::Justification::centred);
     l.setColour(juce::Label::textColourId, SlateLookAndFeel::textDim);
     addAndMakeVisible(l);
@@ -93,106 +103,122 @@ void DetectorPanel::paint(juce::Graphics& g)
     const int w = getWidth();
     const int h = getHeight();
 
-    // Dark slate panel fill
-    g.setColour(SlateLookAndFeel::bgPanel);
+    // Dark brushed slate chassis fill
+    juce::ColourGradient bgGrad(juce::Colour(0xff181c24), 0.0f, 0.0f,
+                                juce::Colour(0xff0e1015), 0.0f, static_cast<float>(h), false);
+    g.setGradientFill(bgGrad);
     g.fillRect(0, 0, w, h);
 
-    // Draw section divider lines & section title headers
-    g.setFont(juce::Font(10.5f, juce::Font::bold));
-    g.setColour(SlateLookAndFeel::textLight.withAlpha(0.85f));
-
-    // Section 1: Transient Engine
-    g.drawText("TRANSIENT ENGINE", 12, 4, 220, 16, juce::Justification::left);
-
-    // Section 2: Filter Section
-    g.drawText("BANDPASS FILTER", 355, 4, 160, 16, juce::Justification::left);
-
-    // Section 3: Gate
-    g.drawText("TRANSIENT GATE", 545, 4, 180, 16, juce::Justification::left);
-
-    // Section 4: Bleed & MIDI
-    g.drawText("BLEED & MIDI", 815, 4, 160, 16, juce::Justification::left);
-
-    // Vertical dividers
+    // Outer subtle metallic border
     g.setColour(SlateLookAndFeel::slateBorder);
-    g.drawVerticalLine(340, 4.0f, (float)h - 4.0f);
-    g.drawVerticalLine(530, 4.0f, (float)h - 4.0f);
-    g.drawVerticalLine(800, 4.0f, (float)h - 4.0f);
-
-    // Outer border
     g.drawRect(0, 0, w, h, 1);
+
+    // Section bounding boxes
+    const int sec1W = 345;
+    const int sec2W = 180;
+    const int sec3W = 270;
+    const int sec4W = w - sec1W - sec2W - sec3W;
+
+    auto drawModule = [&](int mx, int mw, const juce::String& title, const juce::Colour& accent) {
+        juce::Rectangle<float> mBox(static_cast<float>(mx) + 2.0f, 2.0f, static_cast<float>(mw) - 4.0f, static_cast<float>(h) - 4.0f);
+
+        // Recessed module faceplate
+        g.setColour(juce::Colour(0xff14171f));
+        g.fillRoundedRectangle(mBox, 3.0f);
+        g.setColour(SlateLookAndFeel::slateBorder.darker(0.3f));
+        g.drawRoundedRectangle(mBox, 3.0f, 1.0f);
+
+        // Header plate
+        juce::Rectangle<float> titleBox(mBox.getX(), mBox.getY(), mBox.getWidth(), 18.0f);
+        g.setColour(juce::Colour(0xff1a1e28));
+        g.fillRoundedRectangle(titleBox, 3.0f);
+
+        // Title text
+        g.setFont(juce::Font(9.5f, juce::Font::bold));
+        g.setColour(SlateLookAndFeel::textLight.withAlpha(0.9f));
+        g.drawText(title, titleBox.toNearestInt().reduced(8, 0), juce::Justification::centredLeft);
+
+        // Accent indicator dot on header
+        g.setColour(accent);
+        g.fillEllipse(titleBox.getRight() - 14.0f, titleBox.getCentreY() - 3.0f, 6.0f, 6.0f);
+    };
+
+    drawModule(0, sec1W, "TRIGGER ENGINE", SlateLookAndFeel::cyanGlow);
+    drawModule(sec1W, sec2W, "BANDPASS FILTER", juce::Colour(0xff00ffaa));
+    drawModule(sec1W + sec2W, sec3W, "TRANSIENT GATE", SlateLookAndFeel::amberGlow);
+    drawModule(sec1W + sec2W + sec3W, sec4W, "BLEED & MIDI", SlateLookAndFeel::cyanGlow);
 }
 
 void DetectorPanel::resized()
 {
     const int knobY = 22;
-    const int knobW = 60;
-    const int knobH = 68;
+    const int knobW = 58;
+    const int knobH = 64;
 
     // 1. Transient Engine Knobs: Input, Detail, Sens, Retrig, Dyn
     int x = 8;
-    inputGainLabel.setBounds(x, knobY, knobW, 14);
+    inputGainLabel.setBounds(x, knobY, knobW, 12);
     inputGainSlider.setBounds(x, knobY + 12, knobW, knobH);
 
     x += 66;
-    detailLabel.setBounds(x, knobY, knobW, 14);
+    detailLabel.setBounds(x, knobY, knobW, 12);
     detailSlider.setBounds(x, knobY + 12, knobW, knobH);
 
     x += 66;
-    sensLabel.setBounds(x, knobY, knobW, 14);
+    sensLabel.setBounds(x, knobY, knobW, 12);
     sensitivitySlider.setBounds(x, knobY + 12, knobW, knobH);
 
     x += 66;
-    retriggerLabel.setBounds(x, knobY, knobW, 14);
+    retriggerLabel.setBounds(x, knobY, knobW, 12);
     retriggerSlider.setBounds(x, knobY + 12, knobW, knobH);
 
     x += 66;
-    dynLabel.setBounds(x, knobY, knobW, 14);
+    dynLabel.setBounds(x, knobY, knobW, 12);
     dynamicsSlider.setBounds(x, knobY + 12, knobW, knobH);
 
-    // 2. Filter: Low-Cut, High-Cut, Listen button
-    x = 350;
-    lowCutLabel.setBounds(x, knobY, knobW, 14);
-    lowCutSlider.setBounds(x, knobY + 12, knobW, knobH);
+    // 2. Filter: Low-Cut, High-Cut, Audition button
+    x = 352;
+    lowCutLabel.setBounds(x, knobY, 54, 12);
+    lowCutSlider.setBounds(x, knobY + 12, 54, knobH);
 
-    x += 64;
-    highCutLabel.setBounds(x, knobY, knobW, 14);
-    highCutSlider.setBounds(x, knobY + 12, knobW, knobH);
+    x += 58;
+    highCutLabel.setBounds(x, knobY, 54, 12);
+    highCutSlider.setBounds(x, knobY + 12, 54, knobH);
 
-    auditionButton.setBounds(x + 60, knobY + 24, 52, 28);
+    auditionButton.setBounds(x + 58, knobY + 22, 52, 30);
 
     // 3. Gate: Enable, Thresh, Attack, Hold, Rel
-    x = 540;
-    gateEnableButton.setBounds(x, knobY + 24, 60, 24);
+    x = 532;
+    gateEnableButton.setBounds(x, knobY + 24, 62, 24);
 
     x += 64;
-    gateThreshLabel.setBounds(x, knobY, 48, 14);
-    gateThresholdSlider.setBounds(x, knobY + 12, 48, knobH);
+    gateThreshLabel.setBounds(x, knobY, 46, 12);
+    gateThresholdSlider.setBounds(x, knobY + 12, 46, knobH);
 
-    x += 50;
-    gateAttLabel.setBounds(x, knobY, 46, 14);
+    x += 48;
+    gateAttLabel.setBounds(x, knobY, 46, 12);
     gateAttackSlider.setBounds(x, knobY + 12, 46, knobH);
 
     x += 48;
-    gateHldLabel.setBounds(x, knobY, 46, 14);
+    gateHldLabel.setBounds(x, knobY, 46, 12);
     gateHoldSlider.setBounds(x, knobY + 12, 46, knobH);
 
     x += 48;
-    gateRelLabel.setBounds(x, knobY, 46, 14);
+    gateRelLabel.setBounds(x, knobY, 46, 12);
     gateReleaseSlider.setBounds(x, knobY + 12, 46, knobH);
 
     // 4. Bleed & MIDI
-    x = 810;
-    leakageEnableButton.setBounds(x, knobY + 6, 85, 20);
-    leakLabel.setBounds(x + 85, knobY, 48, 14);
-    leakageAmountSlider.setBounds(x + 85, knobY + 12, 48, knobH);
+    x = 800;
+    leakageEnableButton.setBounds(x + 4, knobY + 20, 72, 22);
+    leakLabel.setBounds(x + 78, knobY, 44, 12);
+    leakageAmountSlider.setBounds(x + 78, knobY + 12, 44, knobH);
 
-    midiOutButton.setBounds(x, knobY + 44, 80, 20);
-    midiNoteLabel.setBounds(x + 85, knobY + 36, 48, 14);
-    midiNoteSlider.setBounds(x + 85, knobY + 48, 48, 46);
+    midiOutButton.setBounds(x + 126, knobY + 20, 64, 22);
+    midiNoteLabel.setBounds(x + 192, knobY, 40, 12);
+    midiNoteSlider.setBounds(x + 192, knobY + 12, 40, knobH);
 
-    midiChLabel.setBounds(x + 135, knobY + 36, 42, 14);
-    midiChannelSlider.setBounds(x + 135, knobY + 48, 42, 46);
+    midiChLabel.setBounds(x + 236, knobY, 36, 12);
+    midiChannelSlider.setBounds(x + 236, knobY + 12, 36, knobH);
 }
 
 } // namespace yeahwaah
