@@ -121,29 +121,18 @@ jobs:
             ## DRMTRGRR by yeahwaah
             **Slate Digital Trigger 2 inspired drum transient replacer & enhancer (VST3 / AU / Standalone)**
 
-            ![DRMTRGRR GUI Preview](https://raw.githubusercontent.com/${{ github.repository }}/${{ github.ref_name || 'main' }}/assets/screenshot.png)
-
             ### Downloads:
             - **Windows**: `DRMTRGRR-Windows-x64.zip` (Includes `DRMTRGRR.vst3` & `DRMTRGRR.exe` Standalone)
             - **macOS**: `DRMTRGRR-macOS.zip` (Includes `DRMTRGRR.vst3`, `DRMTRGRR.component` AU, & `DRMTRGRR.app` Standalone)
-            - **Screenshot**: `screenshot.png` (High-resolution 2x Retina GUI preview)
 
             ### Features:
-            - **Real-Time Transient Oscilloscope**: CRT reticle grid with dB markings, luminous neon waveform, and transient hit beacons with shockwave ripples
-            - **Interactive DETAIL / THRESHOLD Laser**: Draggable amber threshold line with direct mouse dragging and dB readout
-            - **Bandpass Transient Filter Overlay**: Visual Low-Cut and High-Cut boundary lines with shaded frequency attenuation zones and draggable handles directly on the display
-            - **Filter Audition**: Amber **AUDITION** mode for isolating sidechain drum frequencies
-            - **ReTrigger Lockout**: Visual lockout duration bar (5–500ms) to eliminate ringing and double-triggering
-            - **Transient-Driven Gate**: Dedicated gate module with Threshold, Attack, Hold, and Release
-            - **Bleed Cancellation & Crosstalk Suppression**: Differential energy leakage suppression
-            - **6 Color-Coded Instrument Channels**: Modular channel strips with custom slot theme colors, waveform thumbnail with hit flash playhead, and tactile action buttons ([LOAD], [FACTORY], [HIT])
-            - **Console Mixing Strip**: Long-throw console volume faders, calibrated dB scale (+12 to -inf), 12-segment studio LED peak meters with peak hold, Pan, Tune (±24 st), and illuminated Solo (S), Mute (M), Phase (ø) buttons
-            - **Velocity Range Bar**: Dual-range velocity split bar (1–127) with hit velocity indicators
-            - **Multi-Channel File Browser**: High-res sample preview, format metadata plaque, audition player, and direct 1-click loading into Channels 1–6
-            - **Global Settings & Velocity Curves**: Linear, Logarithmic, Exponential, and S-Curve dynamics response
-            - **Full MIDI Output & Input**: Configurable note and channel routing
-          files: |
-            release-files/*.zip
-            assets/screenshot.png
+            - Real-time oscilloscope visualizer with draggable **DETAIL** threshold bar
+            - Bandpass transient filter (Low-Cut / High-Cut) with amber **LISTEN** audition button
+            - ReTrigger lockout (5–500ms), Dynamics sensitivity curve, and Leakage crosstalk suppression
+            - Transient-driven gate on the original dry drum track
+            - 6-slot instrument rack with volume faders, peak meters, pan, tune (±24 st), solo, mute, phase invert, and envelopes
+            - Built-in factory synthesized drum sounds (Kick, Snare, Rim, Sub, Room, Crisp) + drag-and-drop sample support
+            - Full MIDI Output & Input
+          files: release-files/*.zip
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
