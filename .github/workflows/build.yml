@@ -1,11 +1,14 @@
-name: Build DRMTRGRR (Windows & macOS)
+name: Build and Release DRMTRGRR (Windows & macOS)
 
 on:
   push:
     branches: [ main, master ]
-  pull_request:
-    branches: [ main, master ]
+    tags:
+      - 'v*'
   workflow_dispatch:
+
+permissions:
+  contents: write
 
 jobs:
   build:
@@ -14,13 +17,27 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [windows-2022, macos-latest]
+        os: [windows-2022, macos-13]
 
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
         with:
           submodules: recursive
+
+      - name: Patch JUCE for macOS SDK
+        if: runner.os == 'macOS'
+        run: |
+          python3 -c '
+          import os
+          path = "libs/JUCE/modules/juce_gui_basics/native/juce_Windowing_mac.mm"
+          if os.path.exists(path):
+              with open(path, "r") as f:
+                  content = f.read()
+              content = content.replace("CGImageRef screenShot = CGWindowListCreateImage", "CGImageRef screenShot = nullptr; // CGWindowListCreateImage")
+              with open(path, "w") as f:
+                  f.write(content)
+          '
 
       - name: Configure CMake (Windows)
         if: runner.os == 'Windows'
@@ -32,31 +49,90 @@ jobs:
         run: |
           cmake --build build --config Release --parallel
 
+      - name: Package (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          Compress-Archive -Path build/DRMTRGRR_artefacts/Release/VST3/DRMTRGRR.vst3, build/DRMTRGRR_artefacts/Release/Standalone/DRMTRGRR.exe -DestinationPath DRMTRGRR-Windows-x64.zip
+
+      - name: Upload Windows Zip Artifact
+        if: runner.os == 'Windows'
+        uses: actions/upload-artifact@v4
+        with:
+          name: DRMTRGRR-Windows-x64
+          path: DRMTRGRR-Windows-x64.zip
+
       - name: Configure CMake (macOS)
         if: runner.os == 'macOS'
         run: |
-          cmake -B build -G "Ninja" -DCMAKE_BUILD_TYPE=Release -DCMAKE_OSX_ARCHITECTURES="arm64;x86_64"
+          cmake -B build -G "Unix Makefiles" -DCMAKE_BUILD_TYPE=Release
 
       - name: Build (macOS)
         if: runner.os == 'macOS'
         run: |
           cmake --build build --config Release --parallel
 
-      - name: Upload Windows Artifacts
-        if: runner.os == 'Windows'
-        uses: actions/upload-artifact@v4
-        with:
-          name: DRMTRGRR-Windows-VST3-and-Standalone
-          path: |
-            build/DRMTRGRR_artefacts/Release/VST3/DRMTRGRR.vst3
-            build/DRMTRGRR_artefacts/Release/Standalone/DRMTRGRR.exe
+      - name: Package (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          cd build/DRMTRGRR_artefacts/Release
+          zip -r ../../../DRMTRGRR-macOS.zip VST3/DRMTRGRR.vst3 AU/DRMTRGRR.component Standalone/DRMTRGRR.app
+          cd ../../..
 
-      - name: Upload macOS Artifacts
+      - name: Upload macOS Zip Artifact
         if: runner.os == 'macOS'
         uses: actions/upload-artifact@v4
         with:
-          name: DRMTRGRR-macOS-Universal-VST3-AU-App
-          path: |
-            build/DRMTRGRR_artefacts/Release/VST3/DRMTRGRR.vst3
-            build/DRMTRGRR_artefacts/Release/AU/DRMTRGRR.component
-            build/DRMTRGRR_artefacts/Release/Standalone/DRMTRGRR.app
+          name: DRMTRGRR-macOS
+          path: DRMTRGRR-macOS.zip
+
+  release:
+    name: Publish GitHub Release
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Download Windows Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: DRMTRGRR-Windows-x64
+          path: release-files
+
+      - name: Download macOS Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: DRMTRGRR-macOS
+          path: release-files
+
+      - name: Display Release Files
+        run: ls -la release-files/
+
+      - name: Publish to GitHub Releases
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_type == 'tag' && github.ref_name || 'v1.0.0' }}
+          name: ${{ github.ref_type == 'tag' && github.ref_name || 'DRMTRGRR v1.0.0' }}
+          draft: false
+          prerelease: false
+          generate_release_notes: true
+          body: |
+            ## DRMTRGRR by yeahwaah
+            **Slate Digital Trigger 2 inspired drum transient replacer & enhancer (VST3 / AU / Standalone)**
+
+            ### Downloads:
+            - **Windows**: `DRMTRGRR-Windows-x64.zip` (Includes `DRMTRGRR.vst3` & `DRMTRGRR.exe` Standalone)
+            - **macOS**: `DRMTRGRR-macOS.zip` (Includes `DRMTRGRR.vst3`, `DRMTRGRR.component` AU, & `DRMTRGRR.app` Standalone)
+
+            ### Features:
+            - Real-time oscilloscope visualizer with draggable **DETAIL** threshold bar
+            - Bandpass transient filter (Low-Cut / High-Cut) with amber **LISTEN** audition button
+            - ReTrigger lockout (5–500ms), Dynamics sensitivity curve, and Leakage crosstalk suppression
+            - Transient-driven gate on the original dry drum track
+            - 6-slot instrument rack with volume faders, peak meters, pan, tune (±24 st), solo, mute, phase invert, and envelopes
+            - Built-in factory synthesized drum sounds (Kick, Snare, Rim, Sub, Room, Crisp) + drag-and-drop sample support
+            - Full MIDI Output & Input
+          files: release-files/*.zip
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
