@@ -30,7 +30,7 @@ jobs:
       - name: Package Windows Plugins
         shell: pwsh
         run: |
-          Compress-Archive -Path "build/DRMTRGRR_artefacts/Release/VST3/DRM-TRGRR1.0.0.vst3", "build/DRMTRGRR_artefacts/Release/Standalone/DRM-TRGRR1.0.0.exe" -DestinationPath DRM-TRGRR-Windows-x64.zip
+          Compress-Archive -Path "build/DRMTRGRR_artefacts/Release/VST3/DRM-TRGRR1.1.0.vst3", "build/DRMTRGRR_artefacts/Release/Standalone/DRM-TRGRR1.1.0.exe" -DestinationPath DRM-TRGRR-Windows-x64.zip
 
       - name: Upload Windows Zip Artifact
         uses: actions/upload-artifact@v4
@@ -59,8 +59,8 @@ jobs:
       - name: Publish to GitHub Releases
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ github.ref_type == 'tag' && github.ref_name || 'v1.0.0' }}
-          name: ${{ github.ref_type == 'tag' && github.ref_name || 'DRM-TRGRR v1.0.0' }}
+          tag_name: ${{ github.ref_type == 'tag' && github.ref_name || 'v1.1.0' }}
+          name: ${{ github.ref_type == 'tag' && github.ref_name || 'DRM-TRGRR v1.1.0' }}
           draft: false
           prerelease: false
           generate_release_notes: true
