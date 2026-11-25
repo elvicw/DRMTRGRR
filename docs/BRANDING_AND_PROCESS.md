@@ -41,3 +41,4 @@
 - **This release is Windows-only** (VST3 + Standalone). macOS/AU is skipped; re-enable by adding AU back to `PLUGIN_FORMATS` under `if(APPLE)`.
 - Release = tag `vX.Y.Z` matching the CMake version; workflow zips the plugin and standalone as the release zip.
 - **Release zip name = `NAME.version-Win64.zip`**, e.g. `DRM-TRGRR.1.1.0-Win64.zip` (note the dot between name and version, unlike the plugin name which has none). Keep the same pattern for every project; the version must match the CMake version and tag. The workflow artifact name matches the zip name.
+- **UI shows the version**: a tiny `vX.Y.Z` tag under the product title (header), taken from `JucePlugin_VersionString` so it always matches the CMake version. Do the same in every project.

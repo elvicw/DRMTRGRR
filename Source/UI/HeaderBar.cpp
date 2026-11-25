@@ -129,6 +129,11 @@ void HeaderBar::paint(juce::Graphics& g)
     g.setGradientFill(steel);
     g.drawText("DRM-TRGRR", titleArea, juce::Justification::centredLeft, true);
 
+    // Tiny version tag under the title; comes from the CMake project version
+    g.setFont(SlateLookAndFeel::boldFont(12.0f));
+    g.setColour(SlateLookAndFeel::textDim);
+    g.drawText("v" JucePlugin_VersionString, 326, 100, 120, 16, juce::Justification::centredLeft, false);
+
     // Separators between the master knobs
     g.setColour(juce::Colours::black.withAlpha(0.7f));
     for (int sx : { 1022, 1182, 1348 })
