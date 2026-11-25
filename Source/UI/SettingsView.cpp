@@ -12,7 +12,7 @@ SettingsView::SettingsView(DrmtrgrrAudioProcessor& proc)
     headerLabel.setColour(juce::Label::textColourId, SlateLookAndFeel::textLight);
     addAndMakeVisible(headerLabel);
 
-    versionLabel.setText("DRM-TRGRR v1.0.0  |  yeahwaah audio", juce::dontSendNotification);
+    versionLabel.setText("DRM-TRGRR v1.1.0  |  yeahwaah audio", juce::dontSendNotification);
     versionLabel.setFont(juce::Font(10.5f, juce::Font::bold));
     versionLabel.setColour(juce::Label::textColourId, SlateLookAndFeel::cyanGlow);
     addAndMakeVisible(versionLabel);

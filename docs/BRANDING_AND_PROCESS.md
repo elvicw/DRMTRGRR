@@ -36,7 +36,7 @@
 
 ## Release conventions (reuse for next projects)
 
-- **Effects-list name = `NAME` + `VERSION`**, no separator, e.g. `DRM-TRGRR1.0.0`. Set via `PRODUCT_NAME "DRM-TRGRR${PROJECT_VERSION}"` in `juce_add_plugin` (JUCE derives the plugin name from it); `getName()` returns the same. Same pattern as DRM-SMRTVRB. Bump `project(... VERSION x.y.z)` and the artefact names in `.github/workflows/build.yml` together.
+- **Effects-list name = `NAME` + `VERSION`**, no separator, e.g. `DRM-TRGRR1.1.0`. Set via `PRODUCT_NAME "DRM-TRGRR${PROJECT_VERSION}"` in `juce_add_plugin` (JUCE derives the plugin name from it); `getName()` returns the same. Same pattern as DRM-SMRTVRB. Bump `project(... VERSION x.y.z)` and the artefact names in `.github/workflows/build.yml` together.
 - **Stable identity never changes**: `PLUGIN_CODE` (DTrg), `PLUGIN_MANUFACTURER_CODE` (Ywah), `BUNDLE_ID`, parameter IDs.
 - **This release is Windows-only** (VST3 + Standalone). macOS/AU is skipped; re-enable by adding AU back to `PLUGIN_FORMATS` under `if(APPLE)`.
 - Release = tag `vX.Y.Z` matching the CMake version; workflow zips `DRM-TRGRR-Windows-x64.zip`.
