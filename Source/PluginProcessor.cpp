@@ -478,7 +478,7 @@ juce::AudioProcessorEditor* DrmtrgrrAudioProcessor::createEditor()
 }
 
 bool DrmtrgrrAudioProcessor::hasEditor() const { return true; }
-const juce::String DrmtrgrrAudioProcessor::getName() const { return "DRMTRGRR"; }
+const juce::String DrmtrgrrAudioProcessor::getName() const { return "DRM-TRGRR" JucePlugin_VersionString; }
 bool DrmtrgrrAudioProcessor::acceptsMidi() const { return true; }
 bool DrmtrgrrAudioProcessor::producesMidi() const { return true; }
 bool DrmtrgrrAudioProcessor::isMidiEffect() const { return false; }

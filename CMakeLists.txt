@@ -18,15 +18,11 @@ else()
     FetchContent_MakeAvailable(JUCE)
 endif()
 
-# Plugin formats
+# Plugin formats. macOS (AU) is intentionally skipped for this release; Windows VST3 + Standalone only.
 set(PLUGIN_FORMATS VST3 Standalone)
-if(APPLE)
-    list(APPEND PLUGIN_FORMATS AU)
-endif()
 
 juce_add_plugin(DRMTRGRR
     COMPANY_NAME "yeahwaah"
-    PLUGIN_NAME "DRMTRGRR"
     BUNDLE_ID "com.yeahwaah.drmtrgrr"
     IS_SYNTH FALSE
     NEEDS_MIDI_INPUT TRUE
@@ -37,7 +33,7 @@ juce_add_plugin(DRMTRGRR
     PLUGIN_MANUFACTURER_CODE Ywah
     PLUGIN_CODE DTrg
     FORMATS ${PLUGIN_FORMATS}
-    PRODUCT_NAME "DRMTRGRR"
+    PRODUCT_NAME "DRM-TRGRR${PROJECT_VERSION}"
 )
 
 target_sources(DRMTRGRR
