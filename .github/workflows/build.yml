@@ -30,13 +30,13 @@ jobs:
       - name: Package Windows Plugins
         shell: pwsh
         run: |
-          Compress-Archive -Path "build/DRMTRGRR_artefacts/Release/VST3/DRM-TRGRR1.1.0.vst3", "build/DRMTRGRR_artefacts/Release/Standalone/DRM-TRGRR1.1.0.exe" -DestinationPath DRM-TRGRR-Windows-x64.zip
+          Compress-Archive -Path "build/DRMTRGRR_artefacts/Release/VST3/DRM-TRGRR1.1.0.vst3", "build/DRMTRGRR_artefacts/Release/Standalone/DRM-TRGRR1.1.0.exe" -DestinationPath DRM-TRGRR.1.1.0-Win64.zip
 
       - name: Upload Windows Zip Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: DRM-TRGRR-Windows-x64
-          path: DRM-TRGRR-Windows-x64.zip
+          name: DRM-TRGRR.1.1.0-Win64
+          path: DRM-TRGRR.1.1.0-Win64.zip
 
   release:
     name: Publish GitHub Release
@@ -50,7 +50,7 @@ jobs:
       - name: Download Windows Artifact
         uses: actions/download-artifact@v4
         with:
-          name: DRM-TRGRR-Windows-x64
+          name: DRM-TRGRR.1.1.0-Win64
           path: release-files
 
       - name: Display Release Files
@@ -69,7 +69,7 @@ jobs:
             **SSL console inspired drum transient replacer & enhancer (VST3 / Standalone)**
 
             ### Windows Download
-            - `DRM-TRGRR-Windows-x64.zip` includes the VST3 plugin and standalone app.
+            - `DRM-TRGRR.1.1.0-Win64.zip` includes the VST3 plugin and standalone app.
 
             ### Interface Preview
             ![DRM-TRGRR SSL console interface](https://raw.githubusercontent.com/${{ github.repository }}/${{ github.sha }}/assets/screenshot.png)
