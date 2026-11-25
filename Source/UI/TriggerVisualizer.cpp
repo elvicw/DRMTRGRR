@@ -5,6 +5,16 @@
 namespace yeahwaah
 {
 
+namespace
+{
+constexpr float kXStart = 14.0f;
+constexpr float kXEnd(float w) { return w - 14.0f; }
+constexpr float kVMargin = 12.0f;
+constexpr int64_t kHitWindowMs = 800;
+
+const juce::Colour kScopeAmber(0xffffb43a);
+} // namespace
+
 TriggerVisualizer::TriggerVisualizer(VisualizerBuffer& vb,
                                      juce::RangedAudioParameter* dp,
                                      juce::RangedAudioParameter* lcp,
@@ -28,21 +38,21 @@ TriggerVisualizer::TriggerVisualizer(VisualizerBuffer& vb,
         retriggerMs = retriggerParam->convertFrom0to1(retriggerParam->getValue());
 }
 
+// The scope is symmetric: 0 dB sits at the top edge and -60 dB on the centre line.
 float TriggerVisualizer::dbToY(float dB, float height) const
 {
-    float norm = (dB + 60.0f) / 60.0f;
-    norm = juce::jlimit(0.0f, 1.0f, norm);
-    return height - (norm * (height - 24.0f) + 12.0f);
+    const float norm = juce::jlimit(0.0f, 1.0f, (dB + 60.0f) / 60.0f);
+    const float half = height * 0.5f - kVMargin;
+    return height * 0.5f - norm * half;
 }
 
 float TriggerVisualizer::yToDb(float y, float height) const
 {
-    float norm = (height - 12.0f - y) / (height - 24.0f);
-    norm = juce::jlimit(0.0f, 1.0f, norm);
+    const float half = height * 0.5f - kVMargin;
+    const float norm = juce::jlimit(0.0f, 1.0f, std::abs(height * 0.5f - y) / half);
     return -60.0f + norm * 60.0f;
 }
 
-// Logarithmic frequency mapping across display: 20 Hz to 20,000 Hz
 float TriggerVisualizer::hzToX(float hz, float startX, float endX) const
 {
     const float minHz = 20.0f;
@@ -60,30 +70,20 @@ float TriggerVisualizer::xToHz(float x, float startX, float endX) const
     return minHz * std::pow(maxHz / minHz, norm);
 }
 
+int TriggerVisualizer::getActiveHitCount() const
+{
+    const int64_t now = juce::Time::currentTimeMillis();
+    int n = 0;
+    for (const auto& h : hitMarkers)
+        if (now - h.timestampMs < kHitWindowMs)
+            ++n;
+    return n;
+}
+
 void TriggerVisualizer::updateWaveform()
 {
     visualizer.getWaveform(waveformData);
     hitMarkers = visualizer.getRecentHits();
-
-    int64_t now = juce::Time::currentTimeMillis();
-
-    // Spawn new shockwave ripples for newly registered hits
-    for (const auto& hit : hitMarkers)
-    {
-        if (hit.timestampMs > lastSeenHitTimestamp)
-        {
-            float hitY = dbToY(juce::Decibels::gainToDecibels(hit.velocity + 1e-4f), static_cast<float>(getHeight()));
-            shockwaves.push_back({ static_cast<float>(getWidth()) - 25.0f, hitY, hit.velocity, now });
-            if (hit.timestampMs > lastSeenHitTimestamp)
-                lastSeenHitTimestamp = hit.timestampMs;
-        }
-    }
-
-    // Clean up shockwaves older than 500ms
-    shockwaves.erase(
-        std::remove_if(shockwaves.begin(), shockwaves.end(),
-                       [now](const HitShockwave& sw) { return (now - sw.timestamp) > 500; }),
-        shockwaves.end());
 
     if (detailParam != nullptr && activeDragTarget != DragTarget::Detail)
         detailDb = detailParam->convertFrom0to1(detailParam->getValue());
@@ -101,307 +101,191 @@ void TriggerVisualizer::paint(juce::Graphics& g)
 {
     const int width = getWidth();
     const int height = getHeight();
+    const float fh = static_cast<float>(height);
+    const float xStart = kXStart;
+    const float xEnd = kXEnd(static_cast<float>(width));
+    const float midY = fh * 0.5f;
 
-    const float xStart = 44.0f;
-    const float xEnd = static_cast<float>(width) - 10.0f;
-
-    // 1. CRT Oscilloscope Deep Dark Background with subtle glass curvature
-    juce::ColourGradient bgGrad(juce::Colour(0xff090c12), static_cast<float>(width) * 0.5f, static_cast<float>(height) * 0.5f,
-                                juce::Colour(0xff040508), 0.0f, 0.0f, true);
-    g.setGradientFill(bgGrad);
+    // CRT glass
+    juce::ColourGradient bg(juce::Colour(0xff1a1206), static_cast<float>(width) * 0.5f, midY,
+                            juce::Colour(0xff060402), 0.0f, 0.0f, true);
+    g.setGradientFill(bg);
     g.fillRect(0, 0, width, height);
 
-    // 2. Bandpass Filter Shaded Attenuation Zones (Slate Trigger 2 Signature Filter Overlay)
-    float lowCutX = hzToX(lowCutHz, xStart, xEnd);
-    float highCutX = hzToX(highCutHz, xStart, xEnd);
+    const float lowCutX = hzToX(lowCutHz, xStart, xEnd);
+    const float highCutX = hzToX(highCutHz, xStart, xEnd);
 
-    // Attenuation shade on left (Low-Cut / High-Pass side)
+    // Band-pass attenuation zones
+    g.setColour(juce::Colours::black.withAlpha(0.45f));
     if (lowCutX > xStart)
-    {
-        juce::ColourGradient lowCutShade(juce::Colour(0xffff2d55).withAlpha(0.18f), xStart, 0.0f,
-                                         juce::Colour(0xff06080d).withAlpha(0.40f), lowCutX, 0.0f, false);
-        g.setGradientFill(lowCutShade);
-        g.fillRect(xStart, 8.0f, lowCutX - xStart, static_cast<float>(height) - 16.0f);
-    }
-
-    // Attenuation shade on right (High-Cut / Low-Pass side)
+        g.fillRect(xStart, 6.0f, lowCutX - xStart, fh - 12.0f);
     if (highCutX < xEnd)
+        g.fillRect(highCutX, 6.0f, xEnd - highCutX, fh - 12.0f);
+
+    // Graticule
+    g.setColour(kScopeAmber.withAlpha(0.07f));
+    for (float x = xStart; x < xEnd; x += (xEnd - xStart) / 16.0f)
+        g.drawVerticalLine(static_cast<int>(x), 6.0f, fh - 6.0f);
+    for (float db : { -6.0f, -12.0f, -24.0f, -36.0f, -48.0f })
     {
-        juce::ColourGradient highCutShade(juce::Colour(0xff06080d).withAlpha(0.40f), highCutX, 0.0f,
-                                          juce::Colour(0xffff2d55).withAlpha(0.18f), xEnd, 0.0f, false);
-        g.setGradientFill(highCutShade);
-        g.fillRect(highCutX, 8.0f, xEnd - highCutX, static_cast<float>(height) - 16.0f);
+        const float y = dbToY(db, fh);
+        g.drawHorizontalLine(static_cast<int>(y), xStart, xEnd);
+        g.drawHorizontalLine(static_cast<int>(fh - y), xStart, xEnd);
     }
+    g.setColour(kScopeAmber.withAlpha(0.22f));
+    g.drawHorizontalLine(static_cast<int>(midY), xStart, xEnd);
 
-    // 3. High-Tech Reticle Grid Lines & dB Scales
-    const float dbLevels[] = { 0.0f, -6.0f, -12.0f, -24.0f, -36.0f, -48.0f };
-    g.setFont(juce::Font(9.5f, juce::Font::bold));
-
-    for (float db : dbLevels)
-    {
-        float y = dbToY(db, static_cast<float>(height));
-        // Grid line
-        g.setColour(juce::Colour(0xff161c28).withAlpha(0.85f));
-        g.drawHorizontalLine(static_cast<int>(y), xStart - 4.0f, xEnd);
-
-        // Accent tick at left
-        g.setColour(juce::Colour(0xff222c3d));
-        g.drawHorizontalLine(static_cast<int>(y), xStart - 8.0f, xStart);
-
-        g.setColour(juce::Colour(0xff687a95));
-        g.drawText(juce::String(static_cast<int>(db)) + " dB", 2, static_cast<int>(y) - 6, 38, 12, juce::Justification::centredRight);
-    }
-
-    // Vertical time division grid lines
-    g.setColour(juce::Colour(0xff121720));
-    for (float x = xStart; x < xEnd; x += 55.0f)
-        g.drawVerticalLine(static_cast<int>(x), 8.0f, static_cast<float>(height) - 8.0f);
-
-    // 4. Render Incoming Audio Waveform (Multi-Stop Electric Neon Glow with Peak Envelope)
+    // Waveform, mirrored around the centre line
     if (!waveformData.empty())
     {
         const int numPoints = static_cast<int>(waveformData.size());
-        const float xRange = xEnd - xStart;
-        const int pixelWidth = std::max(1, static_cast<int>(xRange));
+        const int pixelWidth = std::max(1, static_cast<int>(xEnd - xStart));
 
-        juce::Path wavePath;
-        juce::Path fillPath;
-
-        const float baselineY = static_cast<float>(height) - 12.0f;
-        fillPath.startNewSubPath(xStart, baselineY);
-
-        bool pathStarted = false;
-
+        juce::Path top, bottom, fill;
         for (int px = 0; px < pixelWidth; ++px)
         {
-            float curX = xStart + static_cast<float>(px);
-            int startIdx = px * numPoints / pixelWidth;
-            int endIdx = std::min(numPoints, (px + 1) * numPoints / pixelWidth);
-
+            const int startIdx = px * numPoints / pixelWidth;
+            const int endIdx = std::min(numPoints, (px + 1) * numPoints / pixelWidth);
             float maxAmp = 0.0f;
             for (int s = startIdx; s < endIdx; ++s)
-            {
-                float a = std::abs(waveformData[static_cast<size_t>(s)]);
-                if (a > maxAmp)
-                    maxAmp = a;
-            }
+                maxAmp = std::max(maxAmp, std::abs(waveformData[static_cast<size_t>(s)]));
 
-            float curDb = juce::Decibels::gainToDecibels(maxAmp + 1e-4f);
-            float curY = dbToY(curDb, static_cast<float>(height));
-
-            if (!pathStarted)
+            const float y = dbToY(juce::Decibels::gainToDecibels(maxAmp + 1e-4f), fh);
+            const float x = xStart + static_cast<float>(px);
+            if (px == 0)
             {
-                wavePath.startNewSubPath(curX, curY);
-                fillPath.lineTo(curX, curY);
-                pathStarted = true;
+                top.startNewSubPath(x, y);
+                bottom.startNewSubPath(x, fh - y);
             }
             else
             {
-                wavePath.lineTo(curX, curY);
-                fillPath.lineTo(curX, curY);
+                top.lineTo(x, y);
+                bottom.lineTo(x, fh - y);
             }
         }
 
-        fillPath.lineTo(xEnd, baselineY);
-        fillPath.closeSubPath();
+        fill = top;
+        fill.lineTo(xEnd, midY);
+        fill.lineTo(xStart, midY);
+        fill.closeSubPath();
+        juce::Path fillBottom;
+        fillBottom.addPath(bottom);
+        fillBottom.lineTo(xEnd, midY);
+        fillBottom.lineTo(xStart, midY);
+        fillBottom.closeSubPath();
 
-        // Multi-stop neon wave fill gradient
-        juce::ColourGradient waveGrad(juce::Colour(0xff00f0ff).withAlpha(0.32f), 0.0f, 12.0f,
-                                      juce::Colour(0xff180045).withAlpha(0.08f), 0.0f, static_cast<float>(height), false);
-        waveGrad.addColour(0.35, juce::Colour(0xff0066ff).withAlpha(0.20f));
-        g.setGradientFill(waveGrad);
-        g.fillPath(fillPath);
+        g.setColour(kScopeAmber.withAlpha(0.22f));
+        g.fillPath(fill);
+        g.fillPath(fillBottom);
 
-        // Luminous Bloom Outline
-        g.setColour(SlateLookAndFeel::cyanGlow.withAlpha(0.35f));
-        g.strokePath(wavePath, juce::PathStrokeType(3.5f, juce::PathStrokeType::curved, juce::PathStrokeType::rounded));
-
-        // Crisp Inner Neon Core
-        g.setColour(juce::Colour(0xffb3ffff));
-        g.strokePath(wavePath, juce::PathStrokeType(1.6f, juce::PathStrokeType::curved, juce::PathStrokeType::rounded));
-    }
-
-    // 5. Expanding Impact Shockwave Rings (Ripples) on Drum Hits
-    int64_t now = juce::Time::currentTimeMillis();
-    for (const auto& sw : shockwaves)
-    {
-        int64_t age = now - sw.timestamp;
-        if (age < 500)
+        for (auto* p : { &top, &bottom })
         {
-            float progress = static_cast<float>(age) / 500.0f;
-            float alpha = (1.0f - progress) * (0.3f + 0.7f * sw.velocity);
-            float radius = 8.0f + progress * 55.0f;
-
-            g.setColour(juce::Colour(0xff00ffee).withAlpha(alpha * 0.7f));
-            g.drawEllipse(sw.x - radius, sw.y - radius, radius * 2.0f, radius * 2.0f, 1.8f);
-
-            if (radius > 16.0f)
-            {
-                float innerR = radius * 0.6f;
-                g.setColour(juce::Colour(0xff00c8ff).withAlpha(alpha * 0.45f));
-                g.drawEllipse(sw.x - innerR, sw.y - innerR, innerR * 2.0f, innerR * 2.0f, 1.2f);
-            }
+            g.setColour(kScopeAmber.withAlpha(0.30f));
+            g.strokePath(*p, juce::PathStrokeType(4.0f, juce::PathStrokeType::curved, juce::PathStrokeType::rounded));
+            g.setColour(juce::Colour(0xffffd98a));
+            g.strokePath(*p, juce::PathStrokeType(1.5f, juce::PathStrokeType::curved, juce::PathStrokeType::rounded));
         }
     }
 
-    // 6. Hit Markers & Retrigger Lockout Zone Visualization (Slate Trigger 2 Style)
+    // Hit markers scroll right to left over the hit window
+    const int64_t now = juce::Time::currentTimeMillis();
     for (const auto& hit : hitMarkers)
     {
-        int64_t elapsed = now - hit.timestampMs;
-        if (elapsed < 800)
-        {
-            float alpha = 1.0f - static_cast<float>(elapsed) / 800.0f;
-            float progress = static_cast<float>(elapsed) / 800.0f;
-            float markerX = (static_cast<float>(width) - 25.0f) - progress * (static_cast<float>(width) - 65.0f);
+        const int64_t elapsed = now - hit.timestampMs;
+        if (elapsed >= kHitWindowMs)
+            continue;
 
-            // Retrigger Lockout Shaded Duration Window
-            float lockoutPx = (retriggerMs / 800.0f) * (static_cast<float>(width) - 65.0f);
-            if (lockoutPx > 2.0f)
-            {
-                juce::Rectangle<float> lockoutBox(markerX, 10.0f, lockoutPx, static_cast<float>(height) - 20.0f);
-                g.setColour(SlateLookAndFeel::amberGlow.withAlpha(alpha * 0.14f));
-                g.fillRect(lockoutBox);
-                g.setColour(SlateLookAndFeel::amberGlow.withAlpha(alpha * 0.35f));
-                g.drawHorizontalLine(static_cast<int>(lockoutBox.getBottom() - 2.0f), lockoutBox.getX(), lockoutBox.getRight());
-            }
+        const float progress = static_cast<float>(elapsed) / static_cast<float>(kHitWindowMs);
+        const float alpha = 1.0f - progress;
+        const float x = xEnd - progress * (xEnd - xStart);
 
-            // Glowing trigger beacon line
-            g.setColour(juce::Colour(0xff00ffc8).withAlpha(alpha * 0.45f));
-            g.drawLine(markerX, 10.0f, markerX, static_cast<float>(height) - 10.0f, 3.0f);
+        g.setColour(kScopeAmber.withAlpha(alpha * 0.35f));
+        g.drawLine(x, 14.0f, x, fh - 6.0f, 1.0f);
 
-            g.setColour(juce::Colour(0xff00ffc8).withAlpha(alpha));
-            g.drawLine(markerX, 10.0f, markerX, static_cast<float>(height) - 10.0f, 1.2f);
-
-            // Diamond Hit Beacon Head at top
-            juce::Path diamond;
-            diamond.startNewSubPath(markerX, 8.0f);
-            diamond.lineTo(markerX + 4.5f, 13.0f);
-            diamond.lineTo(markerX, 18.0f);
-            diamond.lineTo(markerX - 4.5f, 13.0f);
-            diamond.closeSubPath();
-
-            g.setColour(juce::Colour(0xff00ffea).withAlpha(alpha * 0.8f));
-            g.fillPath(diamond);
-            g.setColour(juce::Colours::white.withAlpha(alpha));
-            g.strokePath(diamond, juce::PathStrokeType(1.0f));
-
-            // Velocity dynamic bar at bottom
-            float velH = hit.velocity * (static_cast<float>(height) - 35.0f);
-            g.setColour(juce::Colour(0xff00e5ff).withAlpha(alpha * 0.5f));
-            g.fillRoundedRectangle(markerX - 1.5f, static_cast<float>(height) - 12.0f - velH, 3.0f, velH, 1.5f);
-        }
+        juce::Path tri;
+        tri.addTriangle(x - 6.0f, 4.0f, x + 6.0f, 4.0f, x, 16.0f);
+        g.setColour(kScopeAmber.withAlpha(alpha));
+        g.fillPath(tri);
     }
 
-    // 7. Interactive High-Pass (Low-Cut) Vertical Boundary Handle Line
-    g.setColour(juce::Colour(0xffff3366).withAlpha(0.4f));
-    g.drawLine(lowCutX, 8.0f, lowCutX, static_cast<float>(height) - 8.0f, 3.0f);
-    g.setColour(juce::Colour(0xffff3366));
-    g.drawLine(lowCutX, 8.0f, lowCutX, static_cast<float>(height) - 8.0f, 1.5f);
+    // Band-pass handles
+    auto handle = [&](float x, const juce::String& text, juce::Colour c) {
+        g.setColour(c.withAlpha(0.35f));
+        g.drawLine(x, 6.0f, x, fh - 6.0f, 3.0f);
+        g.setColour(c);
+        g.drawLine(x, 6.0f, x, fh - 6.0f, 1.2f);
+        juce::Rectangle<float> badge(x - 34.0f, fh - 24.0f, 68.0f, 16.0f);
+        g.setColour(juce::Colour(0xff120c04));
+        g.fillRoundedRectangle(badge, 3.0f);
+        g.setColour(c);
+        g.drawRoundedRectangle(badge, 3.0f, 1.0f);
+        g.setFont(SlateLookAndFeel::boldFont(11.0f));
+        g.drawText(text, badge.toNearestInt(), juce::Justification::centred);
+    };
+    handle(lowCutX, "HP " + juce::String(static_cast<int>(lowCutHz)) + " Hz", juce::Colour(0xffd9d2bf));
+    handle(highCutX,
+           highCutHz >= 1000.0f ? "LP " + juce::String(highCutHz / 1000.0f, 1) + " kHz"
+                                : "LP " + juce::String(static_cast<int>(highCutHz)) + " Hz",
+           juce::Colour(0xffd9d2bf));
 
-    // HP Cutoff Frequency Handle Badge
-    juce::Rectangle<float> hpBadge(lowCutX - 32.0f, 10.0f, 64.0f, 16.0f);
-    g.setColour(juce::Colour(0xff20050c));
-    g.fillRoundedRectangle(hpBadge, 3.0f);
-    g.setColour(juce::Colour(0xffff3366));
-    g.drawRoundedRectangle(hpBadge, 3.0f, 1.0f);
-    g.setFont(juce::Font(9.0f, juce::Font::bold));
-    g.drawText("HP: " + juce::String(static_cast<int>(lowCutHz)) + " Hz", hpBadge.toNearestInt(), juce::Justification::centred);
+    // Threshold: dashed, mirrored
+    const float detailY = dbToY(detailDb, fh);
+    juce::Path dash;
+    dash.startNewSubPath(xStart, detailY);
+    dash.lineTo(xEnd, detailY);
+    juce::Path dashed;
+    const float pattern[] = { 7.0f, 5.0f };
+    juce::PathStrokeType(1.4f).createDashedStroke(dashed, dash, pattern, 2);
+    g.setColour(kScopeAmber);
+    g.fillPath(dashed);
+    g.setColour(kScopeAmber.withAlpha(0.5f));
+    g.fillPath(dashed, juce::AffineTransform::scale(1.0f, -1.0f, 0.0f, midY));
 
-    // 8. Interactive Low-Pass (High-Cut) Vertical Boundary Handle Line
-    g.setColour(juce::Colour(0xff33ccff).withAlpha(0.4f));
-    g.drawLine(highCutX, 8.0f, highCutX, static_cast<float>(height) - 8.0f, 3.0f);
-    g.setColour(juce::Colour(0xff33ccff));
-    g.drawLine(highCutX, 8.0f, highCutX, static_cast<float>(height) - 8.0f, 1.5f);
+    g.setFont(SlateLookAndFeel::boldFont(12.0f));
+    g.setColour(kScopeAmber);
+    g.drawText(juce::String(detailDb, 1) + " dB", static_cast<int>(xEnd) - 90, static_cast<int>(detailY) - 17, 88, 14,
+               juce::Justification::centredRight);
 
-    // LP Cutoff Frequency Handle Badge
-    juce::Rectangle<float> lpBadge(highCutX - 32.0f, 10.0f, 64.0f, 16.0f);
-    g.setColour(juce::Colour(0xff051622));
-    g.fillRoundedRectangle(lpBadge, 3.0f);
-    g.setColour(juce::Colour(0xff33ccff));
-    g.drawRoundedRectangle(lpBadge, 3.0f, 1.0f);
-    g.setFont(juce::Font(9.0f, juce::Font::bold));
-    juce::String lpText = highCutHz >= 1000.0f
-        ? "LP: " + juce::String(highCutHz / 1000.0f, 1) + " kHz"
-        : "LP: " + juce::String(static_cast<int>(highCutHz)) + " Hz";
-    g.drawText(lpText, lpBadge.toNearestInt(), juce::Justification::centred);
-
-    // 9. Active Draggable DETAIL / THRESHOLD Laser Line (Amber / Gold)
-    float detailY = dbToY(detailDb, static_cast<float>(height));
-
-    // Outer laser glow
-    g.setColour(SlateLookAndFeel::amberGlow.withAlpha(0.28f));
-    g.drawLine(xStart - 4.0f, detailY, xEnd, detailY, 4.0f);
-
-    // Laser beam core
-    g.setColour(SlateLookAndFeel::amberGlow);
-    g.drawLine(xStart - 4.0f, detailY, xEnd, detailY, 1.5f);
-
-    // Laser end markers
-    g.setColour(SlateLookAndFeel::amberGlow.brighter(0.4f));
-    g.fillEllipse(xStart - 6.0f, detailY - 2.5f, 5.0f, 5.0f);
-
-    // Tactile Draggable Handle Badge
-    juce::Rectangle<float> handleRect(static_cast<float>(width) - 118.0f, detailY - 10.0f, 108.0f, 20.0f);
-    juce::ColourGradient handleGrad(juce::Colour(0xff352308), handleRect.getX(), handleRect.getY(),
-                                    juce::Colour(0xff1a1103), handleRect.getX(), handleRect.getBottom(), false);
-    g.setGradientFill(handleGrad);
-    g.fillRoundedRectangle(handleRect, 3.5f);
-
-    g.setColour(SlateLookAndFeel::amberGlow);
-    g.drawRoundedRectangle(handleRect, 3.5f, 1.2f);
-
-    g.setFont(juce::Font(10.5f, juce::Font::bold));
-    g.setColour(juce::Colour(0xffffdd88));
-    juce::String detailText = "DETAIL: " + juce::String(detailDb, 1) + " dB";
-    g.drawText(detailText, handleRect.toNearestInt(), juce::Justification::centred);
-
-    // 10. Auditioning Warning Badge
     if (isAuditioning)
     {
-        juce::Rectangle<int> badge(width - 245, 9, 120, 20);
-        g.setColour(SlateLookAndFeel::amberGlow.withAlpha(0.25f));
-        g.fillRoundedRectangle(badge.toFloat(), 3.5f);
-        g.setColour(SlateLookAndFeel::amberGlow);
-        g.drawRoundedRectangle(badge.toFloat(), 3.5f, 1.2f);
-        g.setFont(juce::Font(9.5f, juce::Font::bold));
+        juce::Rectangle<int> badge(static_cast<int>(xStart) + 4, 6, 118, 18);
+        g.setColour(kScopeAmber.withAlpha(0.25f));
+        g.fillRoundedRectangle(badge.toFloat(), 3.0f);
+        g.setColour(kScopeAmber);
+        g.drawRoundedRectangle(badge.toFloat(), 3.0f, 1.0f);
+        g.setFont(SlateLookAndFeel::boldFont(11.0f));
         g.drawText("AUDITION FILTER", badge, juce::Justification::centred);
     }
 
-    // 11. Outer CRT Vignette & Screen Frame
-    g.setColour(juce::Colour(0xff07090d).withAlpha(0.6f));
-    g.drawRect(0, 0, width, height, 2);
+    // Glass vignette
+    juce::ColourGradient vig(juce::Colours::transparentBlack, static_cast<float>(width) * 0.5f, midY,
+                             juce::Colours::black.withAlpha(0.55f), 0.0f, 0.0f, true);
+    g.setGradientFill(vig);
+    g.fillRect(0, 0, width, height);
 
-    g.setColour(SlateLookAndFeel::slateBorder.brighter(0.1f));
-    g.drawRect(0, 0, width, height, 1);
-
-    // 12. Drag-and-Drop Overlay Highlight
     if (isDragHovered)
     {
-        g.setColour(SlateLookAndFeel::cyanGlow.withAlpha(0.25f));
+        g.setColour(kScopeAmber.withAlpha(0.2f));
         g.fillRect(0, 0, width, height);
-
-        g.setColour(SlateLookAndFeel::cyanGlow);
+        g.setColour(kScopeAmber);
         g.drawRect(2, 2, width - 4, height - 4, 2);
-
-        g.setFont(juce::Font(15.0f, juce::Font::bold));
+        g.setFont(SlateLookAndFeel::boldFont(18.0f));
         g.setColour(juce::Colours::white);
         g.drawText("DROP AUDIO SAMPLE TO LOAD INTO CHANNEL 1", 0, height / 2 - 12, width, 24, juce::Justification::centred);
     }
 }
 
-void TriggerVisualizer::resized()
-{
-}
+void TriggerVisualizer::resized() {}
 
 void TriggerVisualizer::mouseMove(const juce::MouseEvent& e)
 {
-    const float xStart = 44.0f;
-    const float xEnd = static_cast<float>(getWidth()) - 10.0f;
-    float lowCutX = hzToX(lowCutHz, xStart, xEnd);
-    float highCutX = hzToX(highCutHz, xStart, xEnd);
-    float detailY = dbToY(detailDb, static_cast<float>(getHeight()));
+    const float xEnd = kXEnd(static_cast<float>(getWidth()));
+    const float lowCutX = hzToX(lowCutHz, kXStart, xEnd);
+    const float highCutX = hzToX(highCutHz, kXStart, xEnd);
+    const float detailY = dbToY(detailDb, static_cast<float>(getHeight()));
+    const float mirrored = static_cast<float>(getHeight()) - detailY;
 
-    if (std::abs(e.position.y - detailY) < 10.0f)
+    if (std::abs(e.position.y - detailY) < 10.0f || std::abs(e.position.y - mirrored) < 10.0f)
         setMouseCursor(juce::MouseCursor::UpDownResizeCursor);
     else if (std::abs(e.position.x - lowCutX) < 10.0f || std::abs(e.position.x - highCutX) < 10.0f)
         setMouseCursor(juce::MouseCursor::LeftRightResizeCursor);
@@ -411,49 +295,36 @@ void TriggerVisualizer::mouseMove(const juce::MouseEvent& e)
 
 void TriggerVisualizer::mouseDown(const juce::MouseEvent& e)
 {
-    const float xStart = 44.0f;
-    const float xEnd = static_cast<float>(getWidth()) - 10.0f;
-    float lowCutX = hzToX(lowCutHz, xStart, xEnd);
-    float highCutX = hzToX(highCutHz, xStart, xEnd);
-    float detailY = dbToY(detailDb, static_cast<float>(getHeight()));
+    const float xEnd = kXEnd(static_cast<float>(getWidth()));
+    const float lowCutX = hzToX(lowCutHz, kXStart, xEnd);
+    const float highCutX = hzToX(highCutHz, kXStart, xEnd);
+    const float detailY = dbToY(detailDb, static_cast<float>(getHeight()));
+    const float mirrored = static_cast<float>(getHeight()) - detailY;
 
-    // Check hit on Low-Cut handle
-    if (std::abs(e.position.x - lowCutX) < 12.0f)
-    {
-        activeDragTarget = DragTarget::LowCut;
-    }
-    // Check hit on High-Cut handle
-    else if (std::abs(e.position.x - highCutX) < 12.0f)
-    {
-        activeDragTarget = DragTarget::HighCut;
-    }
-    // Check hit on Detail handle or horizontal line
-    else if (std::abs(e.position.y - detailY) < 12.0f || e.position.x > static_cast<float>(getWidth() - 125))
-    {
+    if (std::abs(e.position.y - detailY) < 10.0f || std::abs(e.position.y - mirrored) < 10.0f)
         activeDragTarget = DragTarget::Detail;
-    }
+    else if (std::abs(e.position.x - lowCutX) < 12.0f)
+        activeDragTarget = DragTarget::LowCut;
+    else if (std::abs(e.position.x - highCutX) < 12.0f)
+        activeDragTarget = DragTarget::HighCut;
     else
-    {
         activeDragTarget = DragTarget::None;
-    }
 }
 
 void TriggerVisualizer::mouseDrag(const juce::MouseEvent& e)
 {
-    const float xStart = 44.0f;
-    const float xEnd = static_cast<float>(getWidth()) - 10.0f;
+    const float xEnd = kXEnd(static_cast<float>(getWidth()));
 
     if (activeDragTarget == DragTarget::Detail)
     {
-        detailDb = yToDb(e.position.y, static_cast<float>(getHeight()));
-        detailDb = juce::jlimit(-60.0f, 0.0f, detailDb);
+        detailDb = juce::jlimit(-60.0f, 0.0f, yToDb(e.position.y, static_cast<float>(getHeight())));
         if (detailParam != nullptr)
             detailParam->setValueNotifyingHost(detailParam->convertTo0to1(detailDb));
         repaint();
     }
     else if (activeDragTarget == DragTarget::LowCut)
     {
-        lowCutHz = xToHz(e.position.x, xStart, xEnd);
+        lowCutHz = xToHz(e.position.x, kXStart, xEnd);
         lowCutHz = juce::jlimit(20.0f, std::min(2000.0f, highCutHz - 50.0f), lowCutHz);
         if (lowCutParam != nullptr)
             lowCutParam->setValueNotifyingHost(lowCutParam->convertTo0to1(lowCutHz));
@@ -461,7 +332,7 @@ void TriggerVisualizer::mouseDrag(const juce::MouseEvent& e)
     }
     else if (activeDragTarget == DragTarget::HighCut)
     {
-        highCutHz = xToHz(e.position.x, xStart, xEnd);
+        highCutHz = xToHz(e.position.x, kXStart, xEnd);
         highCutHz = juce::jlimit(std::max(200.0f, lowCutHz + 50.0f), 20000.0f, highCutHz);
         if (highCutParam != nullptr)
             highCutParam->setValueNotifyingHost(highCutParam->convertTo0to1(highCutHz));
@@ -469,7 +340,7 @@ void TriggerVisualizer::mouseDrag(const juce::MouseEvent& e)
     }
 }
 
-void TriggerVisualizer::mouseUp(const juce::MouseEvent& /*e*/)
+void TriggerVisualizer::mouseUp(const juce::MouseEvent&)
 {
     activeDragTarget = DragTarget::None;
 }
@@ -486,25 +357,23 @@ bool TriggerVisualizer::isInterestedInFileDrag(const juce::StringArray& files)
     return false;
 }
 
-void TriggerVisualizer::fileDragEnter(const juce::StringArray& /*files*/, int /*x*/, int /*y*/)
+void TriggerVisualizer::fileDragEnter(const juce::StringArray&, int, int)
 {
     isDragHovered = true;
     repaint();
 }
 
-void TriggerVisualizer::fileDragExit(const juce::StringArray& /*files*/)
+void TriggerVisualizer::fileDragExit(const juce::StringArray&)
 {
     isDragHovered = false;
     repaint();
 }
 
-void TriggerVisualizer::filesDropped(const juce::StringArray& files, int /*x*/, int /*y*/)
+void TriggerVisualizer::filesDropped(const juce::StringArray& files, int, int)
 {
     isDragHovered = false;
     if (!files.isEmpty() && onSampleDropped)
-    {
         onSampleDropped(juce::File(files[0]));
-    }
     repaint();
 }
 

@@ -46,7 +46,7 @@ int main()
         return 1;
     }
 
-    editor->setSize(1240, 860);
+    editor->setSize(1536, 1024);
     editor->setVisible(true);
     std::cout << "Editor bounds: " << editor->getBounds().toString() << std::endl;
 
@@ -56,8 +56,8 @@ int main()
         typedEditor->timerCallback();
     }
 
-    // High quality 2x Retina snapshot
-    auto img = editor->createComponentSnapshot(editor->getLocalBounds(), false, 2.0f);
+    // 1:1 snapshot so it compares directly against the 1536x1024 reference
+    auto img = editor->createComponentSnapshot(editor->getLocalBounds(), false, 1.0f);
 
     juce::File outFile = juce::File::getCurrentWorkingDirectory().getChildFile("assets/screenshot.png");
     outFile.getParentDirectory().createDirectory();

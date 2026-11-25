@@ -1,0 +1,35 @@
+# DRM-TRGRR — Branding & Facelift Process Notes
+
+## Branding (current, authoritative)
+
+- Company: **yeahwaah audio** (previously "yeahwaah" / "YEAHWAAH").
+- Product name: **DRM-TRGRR** (previously "DRMTRGRR").
+- Applies to all user-visible text: header title, logo/wordmark, settings/about, window title, plugin name shown in the DAW, docs, and release artifacts.
+- The reference image still shows the old "DRMTRGRR" / "YEAHWAAH" wording. Layout, typography and style follow the image, but the wording follows this section.
+- Do NOT change internal identifiers as part of branding: parameter IDs, state/ValueTree keys, plugin codes, C++ class names (`DrmtrgrrAudioProcessor`), CMake target names. Changing them breaks automation, presets and saved sessions.
+- Open decision: CMake `PLUGIN_NAME`/`PRODUCT_NAME`/`COMPANY_NAME` and `getName()` are host-visible. Renaming them changes the plugin name in the DAW; the owner must confirm before changing.
+
+## Process borrowed from DRM-SMRTVRB (https://github.com/elvicw/DRM-SMRTVRB)
+
+- Reference image is the primary visual authority. Inspect it before any UI edit.
+- Work on a dedicated task branch (never directly on `main`); no merging or force-pushing without owner approval.
+- UI-only changes: keep DSP, parameter IDs/ranges/defaults, presets and state untouched; reuse existing attachments.
+- Build, screenshot the real rendered UI, compare with the reference, refine, repeat. A passing build is not completion.
+- Keep `docs/` handover notes, changelog and honest validation status (never claim DAW/OS testing that was not done).
+- CI builds only on merged PRs (owner rule in DRM-SMRTVRB); do not trigger CI builds on unmerged branches.
+
+## Build & release (DRM-SMRTVRB model)
+
+- Local: `cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release && cmake --build build && ctest --test-dir build --output-on-failure`.
+- Release is tag-driven: tag `vX.Y.Z` must equal the CMake `project(... VERSION X.Y.Z)`; a workflow builds, tests, packages `<name>-<version>-<OS>-VST3.zip` + `.sha256` (with LICENSE and SOURCE.txt), and uploads it as an artifact.
+- The GitHub Release itself is published manually by the owner, with notes and screenshots.
+- Version bump happens on a `release/x.y.z` branch; after merge, tag, wait for the package workflow, then publish.
+
+## Facelift implementation notes
+
+- UI is laid out in a 1536x1024 design space (`hw::kDesignWidth/Height`) and scaled to the window with a fixed 3:2 aspect ratio.
+- New files: `Source/UI/HardwareControls.*` (knob, lamp/key buttons, value pad, chassis drawing) and a warm `SlateLookAndFeel`.
+- Known differences from the reference image: Detail/Sensitivity read in dB/% of the existing parameters rather than the mock's %; RETRIG and DYNAMICS are drag pads bound to the continuous `retrigger` / `dynamics` parameters; the preset box has Browser/Settings buttons beneath it; per-slot load/factory/hit/advanced controls live in the slot "waveform click" menu; gate/bleed enable LEDs sit by the panel titles; MIDI note/channel open from the MIDI OUT button.
+- Parameter IDs, state keys and DSP are unchanged. Host-visible CMake names (`PLUGIN_NAME`, `PRODUCT_NAME`) are intentionally left as `DRMTRGRR` pending owner confirmation.
+- Local build on macOS 15+ SDKs: JUCE 7.0.12's `juceaide` fails to compile unless built with an older deployment target. Use `CXXFLAGS=-mmacosx-version-min=11.0 OBJCXXFLAGS=-mmacosx-version-min=11.0 CFLAGS=-mmacosx-version-min=11.0 MACOSX_DEPLOYMENT_TARGET=11.0 cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_OSX_DEPLOYMENT_TARGET=11.0` (after removing `build/libs/JUCE/tools`).
+- Screenshot: `./build/generate_screenshot` writes a 1:1 1536x1024 `assets/screenshot.png`.

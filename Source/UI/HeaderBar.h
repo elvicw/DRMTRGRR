@@ -1,6 +1,7 @@
 #pragma once
 #include <juce_gui_basics/juce_gui_basics.h>
 #include <juce_audio_processors/juce_audio_processors.h>
+#include "HardwareControls.h"
 
 namespace yeahwaah
 {
@@ -17,7 +18,7 @@ enum class ActiveTab
 class HeaderBar : public juce::Component
 {
 public:
-    HeaderBar(DrmtrgrrAudioProcessor& processor);
+    explicit HeaderBar(DrmtrgrrAudioProcessor& processor);
     ~HeaderBar() override = default;
 
     void paint(juce::Graphics& g) override;
@@ -32,26 +33,18 @@ public:
 private:
     DrmtrgrrAudioProcessor& processor;
 
-    // Slate Trigger 2 Navigation Tabs
+    // Browser / Settings views toggle over the main panels; Trigger is the default view.
     juce::TextButton browserTabButton { "BROWSER" };
-    juce::TextButton triggerTabButton { "TRIGGERING" };
     juce::TextButton settingsTabButton { "SETTINGS" };
     ActiveTab currentTab = ActiveTab::Trigger;
 
-    // Presets
-    juce::TextButton prevPresetBtn { "<" };
     juce::ComboBox presetBox;
-    juce::TextButton nextPresetBtn { ">" };
+    juce::ArrowButton prevPresetBtn { "prev", 0.5f, juce::Colour(0xffe9dfc6) };
+    juce::ArrowButton nextPresetBtn { "next", 0.0f, juce::Colour(0xffe9dfc6) };
 
-    // Master Knobs
-    juce::Slider inputGainSlider;
-    juce::Slider mixSlider;
-    juce::Slider outputGainSlider;
-    juce::Label inLabel, mixLabel, outLabel;
-
-    std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> inGainAtt;
-    std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> mixAtt;
-    std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> outGainAtt;
+    hw::HardwareKnob inputKnob;
+    hw::HardwareKnob mixKnob;
+    hw::HardwareKnob outputKnob;
 
     float currentInPeak = 0.0f;
     float currentOutPeak = 0.0f;
