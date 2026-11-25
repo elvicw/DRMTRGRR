@@ -1,4 +1,4 @@
-name: Build and Release DRMTRGRR (Windows)
+name: Build and Release DRM-TRGRR (Windows)
 
 on:
   push:
@@ -30,13 +30,13 @@ jobs:
       - name: Package Windows Plugins
         shell: pwsh
         run: |
-          Compress-Archive -Path build/DRMTRGRR_artefacts/Release/VST3/DRMTRGRR.vst3, build/DRMTRGRR_artefacts/Release/Standalone/DRMTRGRR.exe -DestinationPath DRMTRGRR-Windows-x64.zip
+          Compress-Archive -Path "build/DRMTRGRR_artefacts/Release/VST3/DRM-TRGRR1.0.0.vst3", "build/DRMTRGRR_artefacts/Release/Standalone/DRM-TRGRR1.0.0.exe" -DestinationPath DRM-TRGRR-Windows-x64.zip
 
       - name: Upload Windows Zip Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: DRMTRGRR-Windows-x64
-          path: DRMTRGRR-Windows-x64.zip
+          name: DRM-TRGRR-Windows-x64
+          path: DRM-TRGRR-Windows-x64.zip
 
   release:
     name: Publish GitHub Release
@@ -50,7 +50,7 @@ jobs:
       - name: Download Windows Artifact
         uses: actions/download-artifact@v4
         with:
-          name: DRMTRGRR-Windows-x64
+          name: DRM-TRGRR-Windows-x64
           path: release-files
 
       - name: Display Release Files
@@ -60,19 +60,19 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ github.ref_type == 'tag' && github.ref_name || 'v1.0.0' }}
-          name: ${{ github.ref_type == 'tag' && github.ref_name || 'DRMTRGRR v1.0.0' }}
+          name: ${{ github.ref_type == 'tag' && github.ref_name || 'DRM-TRGRR v1.0.0' }}
           draft: false
           prerelease: false
           generate_release_notes: true
           body: |
-            ## DRMTRGRR by yeahwaah
+            ## DRM-TRGRR by yeahwaah audio
             **SSL console inspired drum transient replacer & enhancer (VST3 / Standalone)**
 
             ### Windows Download
-            - `DRMTRGRR-Windows-x64.zip` includes the VST3 plugin and standalone app.
+            - `DRM-TRGRR-Windows-x64.zip` includes the VST3 plugin and standalone app.
 
             ### Interface Preview
-            ![DRMTRGRR SSL console interface](https://raw.githubusercontent.com/${{ github.repository }}/${{ github.sha }}/assets/screenshot.png)
+            ![DRM-TRGRR SSL console interface](https://raw.githubusercontent.com/${{ github.repository }}/${{ github.sha }}/assets/screenshot.png)
 
             ### Features
             - Real-time oscilloscope with draggable **DETAIL** threshold bar

@@ -33,3 +33,10 @@
 - Parameter IDs, state keys and DSP are unchanged. Host-visible CMake names (`PLUGIN_NAME`, `PRODUCT_NAME`) are intentionally left as `DRMTRGRR` pending owner confirmation.
 - Local build on macOS 15+ SDKs: JUCE 7.0.12's `juceaide` fails to compile unless built with an older deployment target. Use `CXXFLAGS=-mmacosx-version-min=11.0 OBJCXXFLAGS=-mmacosx-version-min=11.0 CFLAGS=-mmacosx-version-min=11.0 MACOSX_DEPLOYMENT_TARGET=11.0 cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_OSX_DEPLOYMENT_TARGET=11.0` (after removing `build/libs/JUCE/tools`).
 - Screenshot: `./build/generate_screenshot` writes a 1:1 1536x1024 `assets/screenshot.png`.
+
+## Release conventions (reuse for next projects)
+
+- **Effects-list name = `NAME` + `VERSION`**, no separator, e.g. `DRM-TRGRR1.0.0`. Set via `PRODUCT_NAME "DRM-TRGRR${PROJECT_VERSION}"` in `juce_add_plugin` (JUCE derives the plugin name from it); `getName()` returns the same. Same pattern as DRM-SMRTVRB. Bump `project(... VERSION x.y.z)` and the artefact names in `.github/workflows/build.yml` together.
+- **Stable identity never changes**: `PLUGIN_CODE` (DTrg), `PLUGIN_MANUFACTURER_CODE` (Ywah), `BUNDLE_ID`, parameter IDs.
+- **This release is Windows-only** (VST3 + Standalone). macOS/AU is skipped; re-enable by adding AU back to `PLUGIN_FORMATS` under `if(APPLE)`.
+- Release = tag `vX.Y.Z` matching the CMake version; workflow zips `DRM-TRGRR-Windows-x64.zip`.
