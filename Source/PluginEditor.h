@@ -27,6 +27,15 @@ private:
     DrmtrgrrAudioProcessor& audioProcessor;
     SlateLookAndFeel slateLookAndFeel;
 
+    // Everything is laid out in the 1536x1024 design space and scaled to the window.
+    struct Content : public juce::Component
+    {
+        void paint(juce::Graphics& g) override;
+    };
+    Content content;
+    juce::ComponentBoundsConstrainer constrainer;
+    juce::TooltipWindow tooltipWindow { this, 600 };
+
     HeaderBar headerBar;
     TriggerVisualizer visualizer;
     DetectorPanel detectorPanel;

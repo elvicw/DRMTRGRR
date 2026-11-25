@@ -41,6 +41,7 @@ public:
 
     void updateWaveform();
     void setAuditionMode(bool auditioning) { isAuditioning = auditioning; }
+    int getActiveHitCount() const;
 
     std::function<void(const juce::File&)> onSampleDropped;
 

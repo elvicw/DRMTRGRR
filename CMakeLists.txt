@@ -56,6 +56,8 @@ target_sources(DRMTRGRR
         Source/DSP/SampleSlot.cpp
         Source/UI/SlateLookAndFeel.h
         Source/UI/SlateLookAndFeel.cpp
+        Source/UI/HardwareControls.h
+        Source/UI/HardwareControls.cpp
         Source/UI/TriggerVisualizer.h
         Source/UI/TriggerVisualizer.cpp
         Source/UI/DetectorPanel.h

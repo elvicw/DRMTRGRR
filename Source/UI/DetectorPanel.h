@@ -1,81 +1,57 @@
 #pragma once
 #include <juce_gui_basics/juce_gui_basics.h>
 #include <juce_audio_processors/juce_audio_processors.h>
+#include "HardwareControls.h"
 
 namespace yeahwaah
 {
 
+// Trigger detection, oscilloscope frame, meters and the four processing modules.
+// Laid out in design-space units; the panel's own origin sits at kOriginY of the editor content.
 class DetectorPanel : public juce::Component
 {
 public:
-    DetectorPanel(juce::AudioProcessorValueTreeState& apvts);
+    static constexpr int kOriginY = 128;
+    static juce::Rectangle<int> getScopeBounds() { return { 420, 172, 902, 200 }; }
+
+    explicit DetectorPanel(juce::AudioProcessorValueTreeState& apvts);
     ~DetectorPanel() override = default;
 
     void paint(juce::Graphics& g) override;
     void resized() override;
 
+    void setMeters(float inputPeak, float outputPeak);
+    void setActiveHits(int count);
+
 private:
     juce::AudioProcessorValueTreeState& apvts;
 
-    // 1. Transient Detection Engine Knobs (SSL Knobs)
-    juce::Slider inputGainSlider;
-    juce::Slider detailSlider;
-    juce::Slider sensitivitySlider;
-    juce::Slider retriggerSlider;
-    juce::Slider dynamicsSlider;
+    hw::HardwareKnob detailKnob, sensitivityKnob;
+    hw::ValuePad retrigPad, dynamicsPad;
 
-    // 2. SSL Filter Section
-    juce::Slider lowCutSlider;
-    juce::Slider highCutSlider;
-    juce::TextButton auditionButton { "LISTEN" };
+    hw::HardwareKnob trimKnob, engineDetailKnob, engineDynamicsKnob;
+    hw::HardwareKnob lowCutKnob, highCutKnob;
+    hw::HardwareButton listenButton { "Listen", hw::HardwareButton::Style::Lamp };
 
-    // 3. SSL Transient Gate Section
-    juce::TextButton gateEnableButton { "GATE ON" };
-    juce::Slider gateThresholdSlider;
-    juce::Slider gateAttackSlider;
-    juce::Slider gateHoldSlider;
-    juce::Slider gateReleaseSlider;
+    hw::HardwareButton gateEnableButton { "Gate", hw::HardwareButton::Style::Led };
+    hw::HardwareKnob gateThresholdKnob, gateAttackKnob, gateHoldKnob, gateReleaseKnob;
 
-    // 4. Bleed Suppression & MIDI Section
-    juce::TextButton leakageEnableButton { "BLEED CANCEL" };
-    juce::Slider leakageAmountSlider;
-    juce::TextButton midiOutButton { "MIDI OUT" };
-    juce::Slider midiNoteSlider;
-    juce::Slider midiChannelSlider;
+    hw::HardwareButton bleedEnableButton { "Bleed", hw::HardwareButton::Style::Led };
+    hw::HardwareKnob bleedKnob;
+    hw::HardwareButton midiOutButton { "MidiOut", hw::HardwareButton::Style::Lamp };
+    juce::TextButton midiSettingsButton { "MIDI OUT" };
 
-    // SSL Silkscreen Labels
-    juce::Label inputGainLabel, detailLabel, sensLabel, retriggerLabel, dynLabel;
-    juce::Label lowCutLabel, highCutLabel;
-    juce::Label gateThreshLabel, gateAttLabel, gateHldLabel, gateRelLabel;
-    juce::Label leakLabel, midiNoteLabel, midiChLabel;
+    juce::Slider thresholdBar;
 
-    // Attachments
     using SliderAttachment = juce::AudioProcessorValueTreeState::SliderAttachment;
     using ButtonAttachment = juce::AudioProcessorValueTreeState::ButtonAttachment;
+    std::unique_ptr<SliderAttachment> thresholdBarAtt;
+    std::unique_ptr<ButtonAttachment> listenAtt, gateEnableAtt, bleedEnableAtt, midiOutAtt;
 
-    std::unique_ptr<SliderAttachment> inputGainAtt;
-    std::unique_ptr<SliderAttachment> detailAtt;
-    std::unique_ptr<SliderAttachment> sensAtt;
-    std::unique_ptr<SliderAttachment> retriggerAtt;
-    std::unique_ptr<SliderAttachment> dynAtt;
+    float inMeter = 0.0f, outMeter = 0.0f;
+    int activeHits = 0;
 
-    std::unique_ptr<SliderAttachment> lowCutAtt;
-    std::unique_ptr<SliderAttachment> highCutAtt;
-    std::unique_ptr<ButtonAttachment> auditionAtt;
-
-    std::unique_ptr<ButtonAttachment> gateEnableAtt;
-    std::unique_ptr<SliderAttachment> gateThreshAtt;
-    std::unique_ptr<SliderAttachment> gateAttAtt;
-    std::unique_ptr<SliderAttachment> gateHldAtt;
-    std::unique_ptr<SliderAttachment> gateRelAtt;
-
-    std::unique_ptr<ButtonAttachment> leakageEnableAtt;
-    std::unique_ptr<SliderAttachment> leakageAmountAtt;
-    std::unique_ptr<ButtonAttachment> midiOutAtt;
-    std::unique_ptr<SliderAttachment> midiNoteAtt;
-    std::unique_ptr<SliderAttachment> midiChannelAtt;
-
-    void setupKnob(juce::Slider& s, juce::Label& l, const juce::String& name, const juce::String& text, const juce::String& suffix);
+    void showMidiSettings();
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(DetectorPanel)
 };

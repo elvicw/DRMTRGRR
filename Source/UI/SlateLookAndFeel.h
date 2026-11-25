@@ -4,13 +4,13 @@
 namespace yeahwaah
 {
 
+// Vintage studio-hardware look: dark brushed metal, cream engraving, amber illumination.
 class SlateLookAndFeel : public juce::LookAndFeel_V4
 {
 public:
     SlateLookAndFeel();
     ~SlateLookAndFeel() override = default;
 
-    // Custom styling overrides for SSL Console + Slate Trigger 2
     void drawRotarySlider(juce::Graphics& g, int x, int y, int width, int height,
                           float sliderPosProportional, float rotaryStartAngle,
                           float rotaryEndAngle, juce::Slider& slider) override;
@@ -36,6 +36,10 @@ public:
                       int buttonX, int buttonY, int buttonW, int buttonH,
                       juce::ComboBox& box) override;
 
+    void positionComboBoxText(juce::ComboBox& box, juce::Label& label) override;
+
+    void drawLabel(juce::Graphics& g, juce::Label& label) override;
+
     void drawPopupMenuBackground(juce::Graphics& g, int width, int height) override;
 
     void drawPopupMenuItem(juce::Graphics& g, const juce::Rectangle<int>& area,
@@ -46,21 +50,22 @@ public:
 
     juce::Font getLabelFont(juce::Label& label) override;
 
-    // Steven Slate Drums Trigger 2 & SSL Console Color Palette
+    // Palette (names kept for existing views; values are the warm hardware palette)
     static const juce::Colour bgDark;
     static const juce::Colour bgPanel;
     static const juce::Colour bgControl;
-    static const juce::Colour cyanGlow;
-    static const juce::Colour amberGlow;
+    static const juce::Colour cyanGlow;   // primary highlight (warm amber)
+    static const juce::Colour amberGlow;  // illumination
     static const juce::Colour slateBorder;
     static const juce::Colour slateHighlight;
-    static const juce::Colour textLight;
+    static const juce::Colour textLight;  // warm cream
     static const juce::Colour textDim;
     static const juce::Colour soloYellow;
     static const juce::Colour muteRed;
     static const juce::Colour phaseBlue;
+    static const juce::Colour titleAmber;
+    static const juce::Colour meterGreen;
 
-    // SSL Console Channel Colors
     static const juce::Colour sslBlue;
     static const juce::Colour sslGreen;
     static const juce::Colour sslYellow;
@@ -71,8 +76,11 @@ public:
     static const juce::Colour sslDark;
     static const juce::Colour sslPanel;
 
-    // Channel color accents (Slots 1 to 6)
+    // Channel accent colours (slots 1 to 6) and matching waveform tints
     static juce::Colour getSlotColor(int slotIndex);
+    static juce::Colour getSlotWaveColor(int slotIndex);
+
+    static juce::Font boldFont(float height);
 };
 
 } // namespace yeahwaah

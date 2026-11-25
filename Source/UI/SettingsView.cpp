@@ -12,7 +12,7 @@ SettingsView::SettingsView(DrmtrgrrAudioProcessor& proc)
     headerLabel.setColour(juce::Label::textColourId, SlateLookAndFeel::textLight);
     addAndMakeVisible(headerLabel);
 
-    versionLabel.setText("DRMTRGRR PLATINUM v1.0.0  |  ENGINE: Steven Slate Trigger 2 Compatible Architecture", juce::dontSendNotification);
+    versionLabel.setText("DRM-TRGRR v1.0.0  |  yeahwaah audio", juce::dontSendNotification);
     versionLabel.setFont(juce::Font(10.5f, juce::Font::bold));
     versionLabel.setColour(juce::Label::textColourId, SlateLookAndFeel::cyanGlow);
     addAndMakeVisible(versionLabel);
